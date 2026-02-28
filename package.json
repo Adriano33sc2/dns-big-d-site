@@ -1,0 +1,25 @@
+{
+  "scripts": {
+    "dev:css": "tailwindcss -i ./styles/global.css -o ./public/css/styles.css -w",
+    "deps": "yarn install",
+    "watch": "shadow-cljs watch app;",
+    "dev": "concurrently --kill-others \"npm run dev:css\" \"npm run watch\"",
+    "release": "shadow-cljs release app;",
+    "server": "shadow-cljs server;",
+    "clean": "rm -rf target; rm -rf public/js/compiled"
+  },
+  "dependencies": {
+    "autoprefixer": "^10.4.21",
+    "create-react-class": "^15.6.2",
+    "highlight.js": "11.5.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "shadow-cljs": "2.25.8",
+    "tailwindcss": "^3.4.17"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "postcss": "^8.5.6",
+    "postcss-cli": "^11.0.1"
+  }
+}

@@ -1,0 +1,22 @@
+{:source-paths ["src"]
+
+ :jvm-opts ["-Xmx1G" "-Xms1G"]
+
+ :dependencies [[reagent "2.0.0-alpha2"]
+                [re-frame "1.4.3"]
+                [bidi "2.1.5"]
+                [kibu/pushy "0.3.8"]
+                [com.andrewmcveigh/cljs-time "0.5.2"]
+                [cljs-ajax "0.8.4"]]
+
+ :builds
+ {:app {:target     :browser
+        :output-dir "public/js/compiled"
+        :asset-path "/js/compiled"
+
+        :modules
+        {:main {:init-fn dns-big-d-site.core/init}}
+
+        :devtools
+        {:http-root "public"
+         :http-port 8700}}}}
