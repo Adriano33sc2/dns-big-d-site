@@ -9,20 +9,21 @@
   (db/execute-one! "SELECT id, username, password_hash, role FROM users WHERE username = ?"
                    username))
 
-(defn- verify-password [input hashed]
-  (hashers/verify input hashed))
+(defn login [{{:keys [username password]} :body}]
+  (let [user (find-user-by-username username)]
+    (if (and user (hashers/check password (:users/password_hash user)))
+      (let [token (auth/create-session username)]
+        {:status 200
+         :body {:token token
+                :username username
+                :role (keyword (:role user))}})
+      {:status 401
+       :body {:error "Invalid credentials"}})))
 
 (defroutes auth-routes
-  (POST "/api/auth/login" [request]
-    (let [{:keys [username password]} (:body-params request)
-          user (find-user-by-username username)]
-      (if (and user (verify-password password (:password_hash user)))
-        (let [token (auth/create-session username)]
-          {:status 200
-           :body {:token token
-                  :username username
-                  :role (keyword (:role user))}})
-        {:status 401
-         :body {:error "Invalid credentials"}}))
-    :middleware [json/wrap-json-params
-                json/wrap-json-response]))
+  (POST "/api/auth/login" [] login))
+
+(def auth-routes-with-middleware
+  (-> auth-routes
+      (json/wrap-json-body {:key-fn keyword})
+      json/wrap-json-response))

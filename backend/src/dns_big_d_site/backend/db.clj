@@ -47,7 +47,7 @@
   CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 
   INSERT INTO users (username, password_hash, role) VALUES
-    ('admin', '$2a$10$rK.Y5pW3qJ8vN2xL7mF9hOzE6tB1cA4dS8fG0iH2jK4lM6nO8pQ0r', 'admin')
+    ('admin', 'bcrypt+sha512$ed31ec403ee3f4f8c0cebd51d6ca14e9$12$ba580f2b18e310d9f6ed2f55d203cf6375325baca388bab6', 'admin')
   ON CONFLICT (username) DO NOTHING;")
 
 (defn run-migrations []

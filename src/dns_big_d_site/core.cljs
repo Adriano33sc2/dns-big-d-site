@@ -260,15 +260,14 @@
         password (get db :login-password)]
     {:db db
      :http-xhrio {:method :post
-                  :uri "/api/auth/login"
+                   :uri "http://localhost:3000/api/auth/login"
                   :params {:username username
                            :password password}
-                  :timeout 5000
-                  :with-credentials true
+                   :timeout 5000
                   :format (ajax/json-request-format)
                   :response-format (ajax/json-response-format {:keywords? true})
-                  :on-success [:login-success]
-                  :on-failure [:login-failure]}})))
+                   :on-success [::login-success]
+                   :on-failure [::login-failure]}})))
 
 (rf/reg-event-db ::login-success (fn [db [_ response]]
   (-> db
