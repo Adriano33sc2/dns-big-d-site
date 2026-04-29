@@ -2,12 +2,13 @@
 
  :jvm-opts ["-Xmx1G" "-Xms1G"]
 
- :dependencies [[reagent "2.0.0-alpha2"]
-                [re-frame "1.4.3"]
-                [bidi "2.1.5"]
-                [kibu/pushy "0.3.8"]
-                [com.andrewmcveigh/cljs-time "0.5.2"]
-                [cljs-ajax "0.8.4"]]
+  :dependencies [[reagent "2.0.0-alpha2"]
+                 [re-frame "1.4.3"]
+                 [bidi "2.1.5"]
+                 [kibu/pushy "0.3.8"]
+                 [com.andrewmcveigh/cljs-time "0.5.2"]
+                 [cljs-ajax "0.8.4"]
+                 [day8.re-frame/http-fx "0.2.4"]]
 
  :builds
  {:app {:target     :browser

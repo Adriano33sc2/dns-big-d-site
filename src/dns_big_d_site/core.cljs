@@ -1,7 +1,9 @@
 (ns dns-big-d-site.core
   (:require
-    [reagent.core :as r]
+    [ajax.core :as ajax]
+    [day8.re-frame.http-fx]
     [re-frame.core :as rf]
+    [reagent.core :as r]
     [reagent.dom.client :as rdc]))
 
 ;; ═══════════════════════════════════════════════════════════════════
@@ -98,10 +100,21 @@
     :modal/pack-f5       "Progress tracking system"
     :modal/pack-btn      "Get Started"
 
-    ;; Footer
-    :footer/copy         "© 2026 DnS SC2 Coaching · All Rights Reserved"}
+     ;; Footer
+     :footer/copy         "© 2026 DnS SC2 Coaching · All Rights Reserved"
 
-   :fr
+     ;; Login
+     :login/title         "Backoffice Access"
+     :login/username      "Username"
+     :login/username-ph   "Enter your username"
+     :login/password      "Password"
+     :login/password-ph   "Enter your password"
+     :login/remember      "Remember me"
+     :login/forgot        "Forgot password?"
+     :login/signin         "Sign In"
+     :login/hint          "Authorized personnel only · All access is logged"}
+
+    :fr
    {;; Nav
     :nav/programs        "Programmes"
     :nav/community       "Communauté"
@@ -193,8 +206,19 @@
     :modal/pack-f5       "Système de suivi de progression"
     :modal/pack-btn      "Commencer"
 
-    ;; Footer
-    :footer/copy         "© 2026 DnS SC2 Coaching · Tous Droits Réservés"}})
+     ;; Footer
+     :footer/copy         "© 2026 DnS SC2 Coaching · Tous Droits Réservés"
+
+     ;; Login
+     :login/title         "Accès Backoffice"
+     :login/username      "Nom d'utilisateur"
+     :login/username-ph   "Entrez votre nom d'utilisateur"
+     :login/password      "Mot de passe"
+     :login/password-ph   "Entrez votre mot de passe"
+     :login/remember      "Se souvenir de moi"
+     :login/forgot        "Mot de passe oublié?"
+     :login/signin         "Se connecter"
+     :login/hint          "Personnel autorisé uniquement · Tous les accès sont enregistrés"}})
 
 ;; ═══════════════════════════════════════════════════════════════════
 ;; DB
@@ -203,7 +227,11 @@
 (def default-db
   {:lang                :en
    :active-testimonial  0
-   :booking-modal-open? false})
+   :booking-modal-open? false
+   :login-modal-open?   false
+   :login-username      ""
+   :login-password      ""
+   :login-error         nil})
 
 ;; ═══════════════════════════════════════════════════════════════════
 ;; EVENTS
@@ -213,6 +241,12 @@
 (rf/reg-event-db ::set-lang            (fn [db [_ lang]] (assoc db :lang lang)))
 (rf/reg-event-db ::open-booking-modal  (fn [db _] (assoc db :booking-modal-open? true)))
 (rf/reg-event-db ::close-booking-modal (fn [db _] (assoc db :booking-modal-open? false)))
+(rf/reg-event-db ::open-login-modal    (fn [db _] (assoc db :login-modal-open? true)))
+(rf/reg-event-db ::close-login-modal   (fn [db _] (assoc db :login-modal-open? false
+                                                          :login-error nil)))
+(rf/reg-event-db ::set-login-username  (fn [db [_ val]] (assoc db :login-username val)))
+(rf/reg-event-db ::set-login-password  (fn [db [_ val]] (assoc db :login-password val)))
+(rf/reg-event-db ::set-login-error     (fn [db [_ err]] (assoc db :login-error err)))
 (rf/reg-event-db ::set-active-testimonial (fn [db [_ idx]] (assoc db :active-testimonial idx)))
 
 (rf/reg-event-db
@@ -221,6 +255,31 @@
    (let [next-idx (mod (inc (:active-testimonial db)) 3)]
      (assoc db :active-testimonial next-idx))))
 
+(rf/reg-event-fx ::login (fn [{:keys [db]} _]
+  (let [username (get db :login-username)
+        password (get db :login-password)]
+    {:db db
+     :http-xhrio {:method :post
+                  :uri "/api/auth/login"
+                  :params {:username username
+                           :password password}
+                  :timeout 5000
+                  :with-credentials true
+                  :format (ajax/json-request-format)
+                  :response-format (ajax/json-response-format {:keywords? true})
+                  :on-success [:login-success]
+                  :on-failure [:login-failure]}})))
+
+(rf/reg-event-db ::login-success (fn [db [_ response]]
+  (-> db
+      (assoc :login-modal-open? false)
+      (assoc :login-username "")
+      (assoc :login-password "")
+      (assoc :login-error nil))))
+
+(rf/reg-event-db ::login-failure (fn [db [_ _]]
+  (assoc db :login-error "Invalid credentials")))
+
 ;; ═══════════════════════════════════════════════════════════════════
 ;; SUBS
 ;; ═══════════════════════════════════════════════════════════════════
@@ -228,6 +287,10 @@
 (rf/reg-sub ::lang                (fn [db _] (:lang db)))
 (rf/reg-sub ::booking-modal-open? (fn [db _] (:booking-modal-open? db)))
 (rf/reg-sub ::active-testimonial  (fn [db _] (:active-testimonial db)))
+(rf/reg-sub ::login-modal-open?   (fn [db _] (:login-modal-open? db)))
+(rf/reg-sub ::login-username      (fn [db _] (:login-username db)))
+(rf/reg-sub ::login-password      (fn [db _] (:login-password db)))
+(rf/reg-sub ::login-error         (fn [db _] (:login-error db)))
 
 ;; ═══════════════════════════════════════════════════════════════════
 ;; I18N HELPER
@@ -409,9 +472,75 @@
 ;; ─── Footer ─────────────────────────────────────────────────────
 
 (defn footer-component []
-  [:footer
-   [:div.footer-logo "DnS Coaching"]
-   [:p.footer-copy (t :footer/copy)]])
+  (let [click-count (r/atom 0)
+        timer       (r/atom nil)]
+    (fn []
+      [:footer
+       [:div.footer-logo "DnS Coaching"]
+       [:p.footer-copy
+        {:on-click (fn []
+                     (reset! click-count (inc @click-count))
+                     (when-let [tm @timer]
+                       (js/clearTimeout tm))
+                     (reset! timer
+                             (js/setTimeout #(reset! click-count 0) 2000))
+                     (when (= @click-count 3)
+                       (rf/dispatch [::open-login-modal])
+                       (reset! click-count 0)))}
+        (t :footer/copy)]])))
+
+;; ─── Login Modal ──────────────────────────────────────────────
+
+(defn login-modal []
+  (let [open?      @(rf/subscribe [::login-modal-open?])
+        username   @(rf/subscribe [::login-username])
+        password   @(rf/subscribe [::login-password])
+        error      @(rf/subscribe [::login-error])]
+    (when open?
+      [:div.login-overlay
+       {:on-click (fn [e]
+                    (when (= (.-target e) (.-currentTarget e))
+                      (rf/dispatch [::close-login-modal])))}
+       [:div.login-content
+        [:button.login-close
+         {:on-click #(rf/dispatch [::close-login-modal])}
+         "✕"]
+        [:div.login-logo
+         [:span.logo-main "DnS"]
+         [:span.logo-sub "BACKOFFICE"]]
+         [:h2.login-title (t :login/title)]
+         [:form.login-form
+          {:on-submit #(do (.preventDefault %)
+                           (rf/dispatch [::login {:username username :password password}]))}
+         [:div.login-field
+          [:label.login-label (t :login/username)]
+          [:input.login-input
+           {:type "text"
+            :id "login-username"
+            :value username
+            :placeholder (t :login/username-ph)
+            :on-change #(rf/dispatch [::set-login-username (-> % .-target .-value)])
+            :auto-focus true}]]
+         [:div.login-field
+          [:label.login-label (t :login/password)]
+          [:input.login-input
+           {:type "password"
+            :id "login-password"
+            :value password
+            :placeholder (t :login/password-ph)
+            :on-change #(rf/dispatch [::set-login-password (-> % .-target .-value)])}]]
+         [:div.login-options
+          [:label.login-remember
+           [:input.login-checkbox {:type "checkbox" :id "remember-me"}]
+           [:span (t :login/remember)]]
+          [:a.login-forgot {:href "#"} (t :login/forgot)]]
+         (when error
+           [:div.login-error-msg error])
+         [:button.login-submit
+          {:type "submit"}
+          (t :login/signin)]]
+        [:div.login-divider]
+        [:p.login-hint (t :login/hint)]]])))
 
 ;; ─── Booking Modal ──────────────────────────────────────────────
 
@@ -477,6 +606,7 @@
    [stats-strip]
    [testimonial-section]
    [footer-component]
+   [login-modal]
    [booking-modal]])
 
 ;; ═══════════════════════════════════════════════════════════════════

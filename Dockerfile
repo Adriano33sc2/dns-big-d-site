@@ -1,12 +1,32 @@
 FROM sn0wf1eld/cljs-shadowcljs-lein:2025.38.1
 
-COPY . /usr/src/app
-WORKDIR /usr/src/app
+WORKDIR /app
 
-RUN npx tailwindcss -i public/css/styles.css -o resources/public/assets/css/output.css --minify
+COPY project.clj ./
+RUN lein deps
 
-RUN npm i
+COPY package.json package-lock.json ./
+RUN npm install
 
-RUN npx shadow-cljs release app
+COPY src/ src/
+COPY backend/ backend/
+COPY public/ public/
+COPY shadow-cljs.edn ./
 
-CMD [ "npm", "run", "server" ]
+RUN ./node_modules/.bin/shadow-cljs release app && \
+    lein uberjar
+
+FROM bellsoft/hardened-liberica-runtime-container:jdk-21-crac-cds-musl
+
+WORKDIR /app
+
+COPY --from=0 /app/target/dns-big-d-site-0.1.0-SNAPSHOT-standalone.jar ./standalone.jar
+COPY --from=0 /app/public/ ./public/
+
+EXPOSE 3000
+
+ENV DATABASE_URL=jdbc:postgresql://db:5432/dns_coaching
+ENV DB_USER=postgres
+ENV DB_PASSWORD=postgres
+
+ENTRYPOINT ["java", "-jar", "standalone.jar"]

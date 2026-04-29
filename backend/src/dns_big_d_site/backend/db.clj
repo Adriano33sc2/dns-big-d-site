@@ -1,0 +1,62 @@
+(ns dns-big-d-site.backend.db
+  (:require [next.jdbc :as jdbc])
+  (:import (org.postgresql.ds PGSimpleDataSource)))
+
+(defn get-db-url []
+  (or (System/getenv "DATABASE_URL")
+      "jdbc:postgresql://localhost:5432/dns_coaching"))
+
+(defn get-db-props []
+  (doto (PGSimpleDataSource.)
+    (.setURL (get-db-url))
+    (.setUser (or (System/getenv "DB_USER") "postgres"))
+    (.setPassword (or (System/getenv "DB_PASSWORD") "postgres"))))
+
+(defonce ^:private ds (get-db-props))
+
+(defn init-db! []
+  (jdbc/execute! ds ["SELECT 1"])
+  (println "Database connection established"))
+
+(defn execute! [sql & params]
+  (jdbc/execute! ds (into [sql] params)))
+
+(defn execute-one! [sql & params]
+  (jdbc/execute-one! ds (into [sql] params)))
+
+(def migrations-sql
+  "CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL DEFAULT 'user',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  );
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(512) UNIQUE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
+  CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+
+  INSERT INTO users (username, password_hash, role) VALUES
+    ('admin', '$2a$10$rK.Y5pW3qJ8vN2xL7mF9hOzE6tB1cA4dS8fG0iH2jK4lM6nO8pQ0r', 'admin')
+  ON CONFLICT (username) DO NOTHING;")
+
+(defn run-migrations []
+  (println "Running migrations...")
+  (doseq [stmt (clojure.string/split migrations-sql #";")]
+    (let [stmt (.trim stmt)]
+      (when (and (not (.startsWith stmt "--"))
+                 (not (= stmt "")))
+        (try
+          (execute! stmt)
+          (catch Exception e
+            (println "Migration error:" (.getMessage e))))))))
