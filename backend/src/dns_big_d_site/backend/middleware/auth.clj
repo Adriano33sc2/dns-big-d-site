@@ -2,14 +2,15 @@
   (:require [dns-big-d-site.backend.db :as db]
             [ring.util.response :refer [response]]
             [clojure.string :as str])
-  (:import (java.time Instant Duration)))
+  (:import (java.time Instant Duration)
+           (java.sql Timestamp)))
 
 (defn- generate-token []
   (str/join "" (repeatedly 64 #(char (+ (rand 26) 97)))))
 
 (defn create-session [username]
   (let [token (generate-token)
-        expires-at (.plus (Instant/now) (Duration/ofHours 24))]
+        expires-at (Timestamp/from (.plus (Instant/now) (Duration/ofHours 24)))]
     (db/execute-one! "INSERT INTO sessions (user_id, token, expires_at)
                        SELECT u.id, ?, ? FROM users u WHERE u.username = ?"
                      token expires-at username)
