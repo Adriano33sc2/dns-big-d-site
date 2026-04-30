@@ -14,4 +14,5 @@
    :selected-build-order nil
    :loading? false
    :upload-modal-open? false
-   :replay-uploading? false})
+    :replay-uploading? false
+    :current-route :home})

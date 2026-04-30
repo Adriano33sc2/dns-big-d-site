@@ -252,7 +252,7 @@
      [:a {:href "#programs"} (t :nav/programs)]
      [:a {:href "#discord"} (t :nav/community)]
      [:a {:href "#youtube"} (t :nav/youtube)]
-        [:a {:href "#build-orders" :on-click #(do (.preventDefault %) (js/history.pushState nil "" "/build-orders") (rf/dispatch [:dns-big-d-site.routing/navigate :build-orders-list]))} (t :nav/build-orders)]]
+        [:a {:href "#build-orders" :on-click #(do (.preventDefault %) (js/history.pushState nil "" "/build-orders") (rf/dispatch [:navigate :build-orders-list]))} (t :nav/build-orders)]]
     [lang-switcher]]])
 
 ;; ─── Hero ───────────────────────────────────────────────────────
@@ -883,19 +883,15 @@
 
 (defn app []
   (let [active-nav @(rf/subscribe [:current-route])]
-    [:section
-     {:class "flex flex-col h-screen bg-white overflow-auto gap-10 p-0"}
-     [:div.flex.flex-col.h-full
-      [header]
-      (if (= active-nav :home)
-        [:<>
-         [nav-pages active-nav]
-         [footer-component]]
-        [nav-pages active-nav])
-      [login-modal]
-      [booking-modal]
-      [replay-upload-modal]
-      [delete-confirm-modal]]]))
+    (println active-nav)
+    [:div.flex.flex-col.min-h-screen.bg-white
+     [header]
+     [:div.flex-grow [nav-pages active-nav]]
+     [footer-component]
+     [login-modal]
+     [booking-modal]
+     [replay-upload-modal]
+     [delete-confirm-modal]]))
 
 ;; ═══════════════════════════════════════════════════════════════════
 ;; INIT

@@ -11,11 +11,11 @@
   (js/history.pushState nil "" path))
 
 (rf/reg-event-fx :navigate
-  (fn [_ [_ route]]
-    {:dispatch [:set-current-route route]
-     :dispatch-v (case route
-                   :build-orders-list [:dns-big-d-site.core/fetch-build-orders]
-                   :build-order-detail nil)}))
+  (fn [{:keys [db]} [_ route]]
+    (cond-> {:dispatch [:set-current-route route]
+             :db (assoc db :current-route route)}
+      (= route :build-orders-list)
+      (assoc :dispatch [:dns-big-d-site.core/fetch-build-orders]))))
 
 (rf/reg-event-db :set-current-route
                  (fn [db [_ route]]
