@@ -49,24 +49,28 @@
                     dns-section)]
     steps))
 
-(defn- list-build-orders []
+(defn- list-build-orders [_]
   (let [rows (db/execute! "SELECT id, name, author, play_style, youtube_url
-                           FROM build_orders ORDER BY created_at DESC")]
-    (mapv #(select-keys % [:id :name :author :play_style :youtube_url]) rows)))
+                           FROM build_orders ORDER BY created_at DESC")
+        rows (mapv #(select-keys % [:id :name :author :play_style :youtube_url]) rows)]
+    {:status 200 :body {:build-orders rows}}))
 
-(defn- get-build-order [id]
+(defn- get-build-order-by-id [{{:keys [id]} :params}]
   (let [bo (db/execute-one! "SELECT * FROM build_orders WHERE id = ?" id)
-        steps (db/execute! "SELECT * FROM build_order_steps WHERE build_order_id = ? ORDER BY sort_order" id)]
-    (when bo
-      (-> bo
-          (assoc :steps steps)))))
+        steps (db/execute! "SELECT * FROM build_order_steps WHERE build_order_id = ? ORDER BY sort_order" id)
+        bo (when bo
+             (-> bo
+                 (assoc :steps steps)))]
+    (if bo
+      {:status 200 :body bo}
+      {:status 404 :body {:error "Build order not found"}})))
 
 (defn- create-build-order [{:keys [name author play_style strategic_goals counters weaknesses transition_plan youtube_url]}]
   (let [id (db/execute-one! "INSERT INTO build_orders (name, author, play_style, strategic_goals, counters, weaknesses, transition_plan, youtube_url)
                              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                              RETURNING id"
                             name author play_style strategic_goals counters weaknesses transition_plan youtube_url)]
-    (get-build-order (:id id))))
+    #_(get-build-order (:id id))))
 
 (defn- update-build-order [id params]
   (let [{:keys [name author play_style strategic_goals counters weaknesses transition_plan youtube_url]} params
@@ -85,7 +89,7 @@
       (throw (Exception. "No fields to update")))
     (db/execute! (str "UPDATE build_orders SET " set-str ", updated_at = NOW() WHERE id = ?")
                  (into set-vals [id]))
-    (get-build-order id)))
+    #_(get-build-order id)))
 
 (defn- delete-build-order [id]
   (db/execute! "DELETE FROM build_order_steps WHERE build_order_id = ?" id)
@@ -137,7 +141,7 @@
                 (doseq [step steps-with-bo-id]
                   (add-step bo-id step))
                 {:status 201
-                 :body (get-build-order bo-id)})
+                 :body nil #_(get-build-order bo-id)})
               {:status 500 :body {:error "Spawningtool parsing failed"}}))))
       (catch Exception e
         {:status 500 :body {:error (.getMessage e)}})
@@ -145,46 +149,39 @@
         (Files/delete replay-file)))))
 
 ;; ─── Public routes (no auth required) ──────────────────────────
-(def public-routes
-  (defroutes public-routes
-    (GET "/api/build-orders" []
-      {:status 200 :body (list-build-orders)})
+(defroutes public-routes
+  (GET "/api/build-orders" [] list-build-orders)
 
-    (GET "/api/build-orders/:id" [id]
-      (let [bo (get-build-order (Integer/parseInt id))]
-        (if bo
-          {:status 200 :body bo}
-          {:status 404 :body {:error "Build order not found"}})))))
+  (GET "/api/build-orders/:id" [_] get-build-order-by-id))
 
 ;; ─── Protected routes (auth required) ──────────────────────────
-(def protected-routes
-  (defroutes protected-routes
-    (POST "/api/build-orders" []
-      {:status 201 :body #(create-build-order (:body %))})
+(defroutes protected-routes
+  (POST "/api/build-orders" []
+    {:status 201 :body #(create-build-order (:body %))})
 
-    (PUT "/api/build-orders/:id" [id]
-      {:status 200 :body #(update-build-order (Integer/parseInt id) (:body %))})
+  (PUT "/api/build-orders/:id" [id]
+    {:status 200 :body #(update-build-order (Integer/parseInt id) (:body %))})
 
-    (DELETE "/api/build-orders/:id" [id]
-      (delete-build-order (Integer/parseInt id)))
+  (DELETE "/api/build-orders/:id" [id]
+    (delete-build-order (Integer/parseInt id)))
 
-    (POST "/api/build-orders/:id/steps" [id]
-      {:status 201 :body #(add-step (Integer/parseInt id) (:body %))})
+  (POST "/api/build-orders/:id/steps" [id]
+    {:status 201 :body #(add-step (Integer/parseInt id) (:body %))})
 
-    (PUT "/api/build-orders/:id/steps/:step-id" [id step-id]
-      {:status 200 :body #(update-step (Integer/parseInt step-id) (:body %))})
+  (PUT "/api/build-orders/:id/steps/:step-id" [id step-id]
+    {:status 200 :body #(update-step (Integer/parseInt step-id) (:body %))})
 
-    (DELETE "/api/build-orders/:id/steps/:step-id" [id step-id]
-      (delete-step (Integer/parseInt step-id)))
+  (DELETE "/api/build-orders/:id/steps/:step-id" [id step-id]
+    (delete-step (Integer/parseInt step-id)))
 
-    (POST "/api/replay/upload" [request]
-      (let [file-data (get-in request [:params "file"])
-            file-stream (:tempfile file-data)
-            file-name (or (:filename file-data) "replay.SC2Replay")
-            bo-meta (:body request)]
-        (if-not file-stream
-          {:status 400 :body {:error "No file uploaded"}}
-          (parse-replay-upload file-stream file-name bo-meta))))))
+  (POST "/api/replay/upload" [request]
+    (let [file-data (get-in request [:params "file"])
+          file-stream (:tempfile file-data)
+          file-name (or (:filename file-data) "replay.SC2Replay")
+          bo-meta (:body request)]
+      (if-not file-stream
+        {:status 400 :body {:error "No file uploaded"}}
+        (parse-replay-upload file-stream file-name bo-meta)))))
 
 ;; ─── Combine: GET = public, everything else = auth required ────
 (defn- make-handler []

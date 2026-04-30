@@ -15,7 +15,7 @@
     (cond-> {:dispatch [:set-current-route route]
              :db (assoc db :current-route route)}
       (= route :build-orders-list)
-      (assoc :dispatch [:dns-big-d-site.core/fetch-build-orders]))))
+      (assoc :dispatch [:fetch-build-orders]))))
 
 (rf/reg-event-db :set-current-route
                  (fn [db [_ route]]
