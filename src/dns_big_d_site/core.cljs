@@ -1,14 +1,12 @@
 (ns dns-big-d-site.core
   (:require
-    [ajax.core :as ajax]
     [day8.re-frame.http-fx]
+    [dns-big-d-site.core.events]
+    [dns-big-d-site.core.subs]
+    [dns-big-d-site.routing :as routing]
     [re-frame.core :as rf]
     [reagent.core :as r]
-    [reagent.dom.client :as rdc]
-    [dns-big-d-site.routing :as routing]
-    [dns-big-d-site.core.events]
-    [dns-big-d-site.core.subs :as subs]
-    [bidi.bidi :as bidi]))
+    [reagent.dom.client :as rdc]))
 
 ;; ═══════════════════════════════════════════════════════════════════
 ;; I18N — Translation dictionaries
@@ -884,7 +882,7 @@
      [testimonial-section]]))
 
 (defn app []
-  (let [active-nav @(rf/subscribe [:dns-big-d-site.routing/current-route])]
+  (let [active-nav @(rf/subscribe [:current-route])]
     [:section
      {:class "flex flex-col h-screen bg-white overflow-auto gap-10 p-0"}
      [:div.flex.flex-col.h-full

@@ -27,4 +27,4 @@
 (rf/reg-sub :upload-error (fn [db _] (:upload-error db nil)))
 (rf/reg-sub :delete-confirm (fn [db _] (:delete-confirm db nil)))
 (rf/reg-sub :edit-bo-id (fn [db _] (:edit-bo-id db)))
-(rf/reg-sub :dns-big-d-site.routing/current-route (fn [db _] (:current-route db)))
+(rf/reg-sub :current-route (fn [db _] (:current-route db)))
