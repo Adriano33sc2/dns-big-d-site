@@ -7,6 +7,7 @@
             [ring.adapter.jetty :as jetty]
             [ring.middleware.cors :refer [wrap-cors]]
             [ring.middleware.file :refer [wrap-file]]
+            [ring.middleware.multipart-params :as multipart]
             [ring.middleware.resource :refer [wrap-resource]])
   (:gen-class))
 
@@ -19,6 +20,7 @@
   (-> main-middleware
        (wrap-cors :access-control-allow-origin [#"http://localhost:\d+"]
                   :access-control-allow-methods [:get :post :put :delete :options])
+      (multipart/wrap-multipart-params {:max-file-size (* 1024 1024 50)}) ; 50MB max
       (wrap-file "public")
       (wrap-resource "public")))
 

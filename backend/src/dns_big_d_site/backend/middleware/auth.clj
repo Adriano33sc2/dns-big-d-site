@@ -30,7 +30,7 @@
            :username (:username row)
            :role (keyword (:role row))})))))
 
-(defn- extract-token [request]
+(defn extract-token [request]
   (let [auth-header (get-in request [:headers "authorization"])]
     (when auth-header
       (if (str/starts-with? auth-header "Bearer ")

@@ -1,8 +1,9 @@
 (ns dns-big-d-site.backend.routes.build-orders
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
-            [compojure.core :refer [DELETE GET POST PUT defroutes]]
+            [compojure.core :refer [DELETE GET POST PUT defroutes routes]]
             [dns-big-d-site.backend.db :as db]
+            [dns-big-d-site.backend.middleware.auth :as auth]
             [ring.middleware.json :as json])
   (:import (java.io File FileOutputStream)
            (java.nio.file Files)
@@ -143,43 +144,62 @@
       (finally
         (Files/delete replay-file)))))
 
-(defroutes build-order-routes
-  (GET "/api/build-orders" []
-    {:status 200 :body (list-build-orders)})
+;; ─── Public routes (no auth required) ──────────────────────────
+(def public-routes
+  (defroutes public-routes
+    (GET "/api/build-orders" []
+      {:status 200 :body (list-build-orders)})
 
-  (GET "/api/build-orders/:id" [id]
-    (let [bo (get-build-order (Integer/parseInt id))]
-      (if bo
-        {:status 200 :body bo}
-        {:status 404 :body {:error "Build order not found"}})))
+    (GET "/api/build-orders/:id" [id]
+      (let [bo (get-build-order (Integer/parseInt id))]
+        (if bo
+          {:status 200 :body bo}
+          {:status 404 :body {:error "Build order not found"}})))))
 
-  (POST "/api/build-orders" []
-    {:status 201 :body #(create-build-order (:body %))})
+;; ─── Protected routes (auth required) ──────────────────────────
+(def protected-routes
+  (defroutes protected-routes
+    (POST "/api/build-orders" []
+      {:status 201 :body #(create-build-order (:body %))})
 
-  (PUT "/api/build-orders/:id" [id]
-    {:status 200 :body #(update-build-order (Integer/parseInt id) (:body %))})
+    (PUT "/api/build-orders/:id" [id]
+      {:status 200 :body #(update-build-order (Integer/parseInt id) (:body %))})
 
-  (DELETE "/api/build-orders/:id" [id] (delete-build-order (Integer/parseInt id)))
+    (DELETE "/api/build-orders/:id" [id]
+      (delete-build-order (Integer/parseInt id)))
 
-  (POST "/api/build-orders/:id/steps" [id]
-    {:status 201 :body #(add-step (Integer/parseInt id) (:body %))})
+    (POST "/api/build-orders/:id/steps" [id]
+      {:status 201 :body #(add-step (Integer/parseInt id) (:body %))})
 
-  (PUT "/api/build-orders/:id/steps/:step-id" [id step-id]
-    {:status 200 :body #(update-step (Integer/parseInt step-id) (:body %))})
+    (PUT "/api/build-orders/:id/steps/:step-id" [id step-id]
+      {:status 200 :body #(update-step (Integer/parseInt step-id) (:body %))})
 
-  (DELETE "/api/build-orders/:id/steps/:step-id" [id step-id]
-    (delete-step (Integer/parseInt step-id)))
+    (DELETE "/api/build-orders/:id/steps/:step-id" [id step-id]
+      (delete-step (Integer/parseInt step-id)))
 
-  (POST "/api/replay/upload" [request]
-    (let [file-data (get-in request [:params "file"])
-          file-stream (:tempfile file-data)
-          file-name (or (:filename file-data) "replay.SC2Replay")
-          bo-meta (:body request)]
-      (if-not file-stream
-        {:status 400 :body {:error "No file uploaded"}}
-        (parse-replay-upload file-stream file-name bo-meta)))))
+    (POST "/api/replay/upload" [request]
+      (let [file-data (get-in request [:params "file"])
+            file-stream (:tempfile file-data)
+            file-name (or (:filename file-data) "replay.SC2Replay")
+            bo-meta (:body request)]
+        (if-not file-stream
+          {:status 400 :body {:error "No file uploaded"}}
+          (parse-replay-upload file-stream file-name bo-meta))))))
+
+;; ─── Combine: GET = public, everything else = auth required ────
+(defn- make-handler []
+  (fn [request]
+    (if (= (:request-method request) :get)
+      ;; Public: match against public routes
+      (public-routes request)
+      ;; Protected: check auth first, then match against protected routes
+      (let [token (auth/extract-token request)
+            user-data (auth/validate-session token)]
+        (if-not user-data
+          {:status 401 :body {:error "Unauthorized"}}
+          (protected-routes request))))))
 
 (def build-order-routes-with-middleware
-  (-> build-order-routes
-      (json/wrap-json-body {:key-fn keyword})
+  (-> (make-handler)
+      json/wrap-json-body {:key-fn keyword}
       json/wrap-json-response))

@@ -1135,6 +1135,410 @@ footer {
   50%      { box-shadow: 0 0 28px rgba(240,180,41,0.4); }
 }
 
+/* ─── BUILD ORDERS PAGE ──────────────────────────────────────────── */
+
+.bo-page-header {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.page-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 2rem;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.bo-upload-btn {
+  white-space: nowrap;
+}
+
+.bo-grid {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem 3rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.bo-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.bo-card:hover {
+  border-color: var(--gold);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(240,180,41,0.15);
+}
+
+.bo-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold), var(--blue));
+}
+
+.bo-card-race {
+  margin-bottom: 0.75rem;
+}
+
+.race-badge {
+  display: inline-block;
+  background: rgba(240,180,41,0.15);
+  color: var(--gold);
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.bo-card-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+.bo-card-author {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.bo-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--muted);
+  font-size: 1.2rem;
+}
+
+/* ─── BUILD ORDER DETAIL ────────────────────────────────────────── */
+
+.bo-detail-header {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 1rem;
+}
+
+.bo-detail-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.bo-detail-author {
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+.bo-info-row {
+  max-width: 1200px;
+  margin: 1.5rem auto;
+  padding: 0 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.info-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+
+.info-card-label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--gold);
+  margin-bottom: 0.5rem;
+}
+
+.info-card-value {
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.bo-video-section {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+}
+
+.section-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.3rem;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 1rem;
+}
+
+.youtube-embed {
+  width: 100%;
+  max-width: 800px;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.bo-steps-section {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1.5rem 3rem;
+}
+
+.bo-steps-table {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.bo-step-row {
+  display: grid;
+  grid-template-columns: 60px 80px 1fr 200px auto;
+  border-bottom: 1px solid rgba(240,180,41,0.08);
+}
+
+.bo-step-row:last-child {
+  border-bottom: none;
+}
+
+.bo-step-header {
+  background: rgba(240,180,41,0.08);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  color: var(--gold);
+}
+
+.bo-col {
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.bo-col-supply {
+  justify-content: center;
+  font-weight: 600;
+  color: var(--gold);
+}
+
+.bo-col-time {
+  justify-content: center;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.bo-col-action {
+  gap: 0.5rem;
+}
+
+.action-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: rgba(30,144,255,0.1);
+  border: 1px solid rgba(30,144,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.action-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.action-initial {
+  font-size: 0.7rem;
+  color: var(--blue);
+  font-weight: 600;
+}
+
+.action-text {
+  margin-left: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.bo-col-notes {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.bo-col-actions {
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+.step-input {
+  background: rgba(30,144,255,0.08);
+  border: 1px solid var(--blue);
+  color: var(--text);
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  width: 100%;
+}
+
+.btn-step {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.15s ease;
+}
+
+.btn-step:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.btn-step.save {
+  border-color: #4caf50;
+  color: #4caf50;
+}
+
+.btn-step.save:hover {
+  background: rgba(76,175,80,0.1);
+}
+
+.btn-step.delete {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.btn-step.delete:hover {
+  background: rgba(255,60,60,0.1);
+}
+
+.step-editing {
+  background: rgba(30,144,255,0.05);
+}
+
+/* ─── REPLAY UPLOAD MODAL ──────────────────────────────────────── */
+
+.upload-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5,8,16,0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.upload-content {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+}
+
+.upload-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.upload-title {
+  font-family: 'Orbitron', sans-serif;
+  color: var(--gold);
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.upload-subtitle {
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+}
+
+.upload-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.upload-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.upload-label {
+  font-size: 0.85rem;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.upload-file {
+  background: rgba(30,144,255,0.08);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.75rem;
+  border-radius: 6px;
+}
+
+.upload-loading {
+  color: var(--blue);
+  font-size: 0.9rem;
+}
+
+.upload-submit {
+  background: var(--gold);
+  color: #050810;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.upload-submit:hover:not(:disabled) {
+  background: #e0a520;
+}
+
+.upload-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* ─── RESPONSIVE ─────────────────────────────────────────────────── */
 @media (max-width: 700px) {
   header     { padding: 1.2rem 1.5rem; }
@@ -1142,4 +1546,25 @@ footer {
   .header-right { gap: 0.5rem; }
   .stats-strip { gap: 1rem 3rem; }
   footer     { flex-direction: column; text-align: center; }
+
+  .bo-page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .bo-step-row {
+    grid-template-columns: 50px 70px 1fr auto;
+  }
+
+  .bo-col-notes {
+    display: none;
+  }
+
+  .bo-info-row {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+  }
 }

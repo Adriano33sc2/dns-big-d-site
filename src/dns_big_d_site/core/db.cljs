@@ -1,0 +1,17 @@
+(ns dns-big-d-site.core.db)
+
+(def default-db
+  {:lang :en
+   :active-testimonial 0
+   :booking-modal-open? false
+   :login-modal-open? false
+   :login-username ""
+   :login-password ""
+   :login-error nil
+   :auth-token nil
+   :current-user nil
+   :build-orders []
+   :selected-build-order nil
+   :loading? false
+   :upload-modal-open? false
+   :replay-uploading? false})
