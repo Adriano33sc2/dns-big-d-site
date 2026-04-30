@@ -1,5 +1,5 @@
 (ns dns-big-d-site.backend.core
-  (:require [compojure.core :refer [defroutes]]
+  (:require [compojure.core :refer [routes]]
             [compojure.route :as route]
             [dns-big-d-site.backend.db :as db]
             [dns-big-d-site.backend.routes.auth :refer [auth-routes-with-middleware]]
@@ -11,15 +11,12 @@
             [ring.middleware.resource :refer [wrap-resource]])
   (:gen-class))
 
-(defroutes main-middleware
-  auth-routes-with-middleware
-  build-order-routes-with-middleware
-  (route/not-found "Not Found"))
-
 (def app
-  (-> main-middleware
-       (wrap-cors :access-control-allow-origin [#"http://localhost:\d+"]
-                  :access-control-allow-methods [:get :post :put :delete :options])
+  (-> (routes auth-routes-with-middleware
+              build-order-routes-with-middleware
+              (route/not-found "Not Found"))
+      (wrap-cors :access-control-allow-origin [#"http://localhost:\d+"]
+                 :access-control-allow-methods [:get :post :put :delete :options])
       (multipart/wrap-multipart-params {:max-file-size (* 1024 1024 50)}) ; 50MB max
       (wrap-file "public")
       (wrap-resource "public")))

@@ -151,7 +151,6 @@
 ;; ─── Public routes (no auth required) ──────────────────────────
 (defroutes public-routes
   (GET "/api/build-orders" [] list-build-orders)
-
   (GET "/api/build-orders/:id" [_] get-build-order-by-id))
 
 ;; ─── Protected routes (auth required) ──────────────────────────
@@ -183,20 +182,7 @@
         {:status 400 :body {:error "No file uploaded"}}
         (parse-replay-upload file-stream file-name bo-meta)))))
 
-;; ─── Combine: GET = public, everything else = auth required ────
-(defn- make-handler []
-  (fn [request]
-    (if (= (:request-method request) :get)
-      ;; Public: match against public routes
-      (public-routes request)
-      ;; Protected: check auth first, then match against protected routes
-      (let [token (auth/extract-token request)
-            user-data (auth/validate-session token)]
-        (if-not user-data
-          {:status 401 :body {:error "Unauthorized"}}
-          (protected-routes request))))))
-
-(def build-order-routes-with-middleware
-  (-> (make-handler)
+(defroutes build-order-routes-with-middleware
+  (-> (routes public-routes (auth/auth-middleware protected-routes))
       json/wrap-json-body {:key-fn keyword}
       json/wrap-json-response))
