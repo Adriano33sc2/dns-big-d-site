@@ -25,10 +25,10 @@
                                token)]
       (when row
         (if (.isBefore (:expires-at row) (Instant/now))
+          nil
           {:user-id (:user-id row)
            :username (:username row)
-           :role (keyword (:role row))}
-          nil)))))
+           :role (keyword (:role row))})))))
 
 (defn- extract-token [request]
   (let [auth-header (get-in request [:headers "authorization"])]

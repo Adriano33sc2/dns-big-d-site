@@ -25,3 +25,29 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 INSERT INTO users (username, password_hash, role) VALUES
     ('admin', '$2a$10$rK.Y5pW3qJ8vN2xL7mF9hOzE6tB1cA4dS8fG0iH2jK4lM6nO8pQ0r', 'admin')
 ON CONFLICT (username) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS build_orders (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    author VARCHAR(255) NOT NULL,
+    play_style TEXT,
+    strategic_goals TEXT,
+    counters TEXT,
+    weaknesses TEXT,
+    transition_plan TEXT,
+    youtube_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS build_order_steps (
+    id SERIAL PRIMARY KEY,
+    build_order_id INTEGER REFERENCES build_orders(id) ON DELETE CASCADE,
+    supply INTEGER,
+    time_seconds INTEGER NOT NULL DEFAULT 0,
+    action_name VARCHAR(255) NOT NULL,
+    notes TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_steps_build_order_id ON build_order_steps(build_order_id);

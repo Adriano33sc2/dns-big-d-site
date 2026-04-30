@@ -28,7 +28,7 @@
                  [ring/ring-defaults "0.7.0"]
                  [buddy/buddy-hashers "2.0.167"]
                  [com.github.seancorfield/next.jdbc "1.3.1093"]
-                 [org.postgresql/postgresql "42.7.10"]]
+                  [org.postgresql/postgresql "42.7.10"]]
   :profiles {:dev {:dependencies [[day8.re-frame/tracing "0.6.2"]
                                   [day8.re-frame/re-frame-10x "1.10.1"]]}
              :uberjar {:aot :all}})
