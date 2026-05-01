@@ -591,16 +591,16 @@
    [:p.info-card-value (or value "—")]])
 
 (defn- build-order-list []
-  (let [orders @(rf/subscribe [:build-orders])
-        logged-in? @(rf/subscribe [:is-logged-in?])]
-    (fn []
-      [:<>
+  (fn []
+    (let [orders @(rf/subscribe [:build-orders])
+          logged-in? @(rf/subscribe [:is-logged-in?])]
+      [:div
        [:div.bo-page-header
         [:h1.page-title "Build Orders"]
         (when logged-in?
           [:button.btn.btn-gold.bo-upload-btn
            {:on-click #(rf/dispatch [:open-upload-modal])}
-           "Upload Replay"])]]
+           "Upload Replay"])]
        [:div.bo-grid
         (if (empty? orders)
           [:div.bo-empty "No build orders yet."]
@@ -618,13 +618,20 @@
                                   (rf/dispatch [:set-delete-confirm {:type :bo :id (:id bo)}]))}
                   "🗑"])
                [:h3.bo-card-title (:name bo)]
-               [:p.bo-card-author "by " (:author bo)]])))])))
+               [:p.bo-card-author "by " (:author bo)]])))]
+       ]
+      ;; 1. Open the header vector
+
+
+      ;; 4. Now start the grid vector separately
+      )))
+
 
 (defn- build-order-detail []
-  (let [bo @(rf/subscribe [:selected-build-order])
-        logged-in? @(rf/subscribe [:is-logged-in?])
-        edit-bo-id @(rf/subscribe [:edit-bo-id])]
-    (fn []
+  (fn []
+    (let [bo @(rf/subscribe [:selected-build-order])
+          logged-in? @(rf/subscribe [:is-logged-in?])
+          edit-bo-id @(rf/subscribe [:edit-bo-id])]
       (if-not bo
         [:div.bo-page-header
          [:h1.page-title "Build Order Not Found"]]
@@ -798,7 +805,7 @@
                                   (rf/dispatch [:upload-replay file bo-meta]))))))}
          [:div.upload-field
           [:label.upload-label "Replay File (.SC2Replay)"]
-          [:input.upload-file {:type "file" :id "file" :accept ".SC2Replay"}]]
+          [:input.upload-file {:type "file" :id "file" :name "file" :accept ".SC2Replay"}]]
          [:div.upload-field
           [:label.upload-label "Build Order Name"]
           [:input.upload-input {:type "text" :id "bo-name" :placeholder "e.g. 14 Pylon Expand"
