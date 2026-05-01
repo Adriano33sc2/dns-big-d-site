@@ -23,7 +23,3 @@
 (defroutes auth-routes
   (POST "/api/auth/login" [] login))
 
-(defroutes auth-routes-with-middleware
-  (-> auth-routes
-      (json/wrap-json-body {:key-fn keyword})
-      json/wrap-json-response))

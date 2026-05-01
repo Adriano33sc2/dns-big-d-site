@@ -183,6 +183,4 @@
         (parse-replay-upload file-stream file-name bo-meta)))))
 
 (defroutes build-order-routes-with-middleware
-  (-> (routes public-routes (auth/auth-middleware protected-routes))
-      json/wrap-json-body {:key-fn keyword}
-      json/wrap-json-response))
+  (routes public-routes (auth/auth-middleware protected-routes)))
