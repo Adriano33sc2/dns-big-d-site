@@ -24,11 +24,11 @@
                                WHERE s.token = ? AND s.is_active = true"
                                token)]
       (when row
-        (if (.isBefore (:expires-at row) (Instant/now))
+        (if (< (.getTime (:sessions/expires_at row)) (System/currentTimeMillis))
           nil
-          {:user-id (:user-id row)
-           :username (:username row)
-           :role (keyword (:role row))})))))
+          {:user-id (:sessions/user_id row)
+           :username (:users/username row)
+           :role (keyword (:users/role row))})))))
 
 (defn extract-token [request]
   (let [auth-header (get-in request [:headers "authorization"])]

@@ -4,7 +4,7 @@
             [compojure.core :refer [DELETE GET POST PUT defroutes routes]]
             [dns-big-d-site.backend.db :as db]
             [dns-big-d-site.backend.middleware.auth :as auth]
-            [ring.middleware.json :as json])
+            [ring.middleware.multipart-params :refer [wrap-multipart-params]])
   (:import (java.io File FileOutputStream)
            (java.nio.file Files)
            (java.util.concurrent TimeUnit)))
@@ -18,21 +18,22 @@
         (+ (* mins-int 60) secs-int))
       0)))
 
+(defn- build-order-line? [line]
+  (boolean (re-matches #"\d+ \d+:\d+ .+" line)))
+
 (defn- parse-spawningtool-output [output]
   (let [lines (str/split output #"\n")
-        ;; Find the DnS player section or use first player
-        dns-section (loop [lines lines found? false result []]
+        ;; Skip first 3 metadata lines, collect build order lines until blank line or non-matching line
+        dns-section (loop [lines (drop 3 lines) result []]
                       (if (empty? lines)
                         result
                         (let [line (first lines)
                               rest (rest lines)]
-                          (if found?
-                            (if (str/starts-with? line "A.I.")
-                              result
-                              (recur rest true (conj result line)))
-                            (if (= line "DnS")
-                              (recur rest true [])
-                              (recur rest false result))))))
+                          (if (str/blank? line)
+                            result
+                            (if (build-order-line? line)
+                              (recur rest (conj result line))
+                              result)))))
         steps (mapv (fn [line]
                       (let [parts (str/split line #" " 3)
                             supply (when (> (count parts) 0)
@@ -52,7 +53,7 @@
 (defn- list-build-orders [_]
   (let [rows (db/execute! "SELECT id, name, author, play_style, youtube_url
                            FROM build_orders ORDER BY created_at DESC")
-        rows (mapv #(select-keys % [:id :name :author :play_style :youtube_url]) rows)]
+        rows (mapv #(select-keys % [:build_orders/id :build_orders/name :build_orders/author :build_orders/play_style :build_orders/youtube_url]) rows)]
     {:status 200 :body {:build-orders rows}}))
 
 (defn- get-build-order-by-id [{{:keys [id]} :params}]
@@ -70,7 +71,7 @@
                              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                              RETURNING id"
                             name author play_style strategic_goals counters weaknesses transition_plan youtube_url)]
-    #_(get-build-order (:id id))))
+    (:build_orders/id id)))
 
 (defn- update-build-order [id params]
   (let [{:keys [name author play_style strategic_goals counters weaknesses transition_plan youtube_url]} params
@@ -97,10 +98,10 @@
   {:status 204})
 
 (defn- add-step [bo-id params]
-  (let [{:keys [supply time_seconds action_name notes sort_order]} params]
+  (let [{:keys [supply time-seconds action-name notes sort-order]} params]
     (db/execute-one! "INSERT INTO build_order_steps (build_order_id, supply, time_seconds, action_name, notes, sort_order)
                       VALUES (?, ?, ?, ?, ?, ?)"
-                     bo-id supply time_seconds action_name notes sort_order)))
+                     bo-id supply time-seconds action-name notes sort-order)))
 
 (defn- update-step [step-id params]
   (let [{:keys [supply time_seconds action_name notes sort_order]} params
@@ -127,14 +128,14 @@
     (try
       (with-open [out (FileOutputStream. replay-file)]
         (io/copy file-stream out))
-      (let [process-builder (ProcessBuilder. ["python" "-m" "spawningtool" (str replay-file) "--build"])
+      (let [process-builder (ProcessBuilder. ["/Users/iceman/sc2-replay-test/bin/python" "-m" "spawningtool" (str replay-file) "--build"])
             process (.start process-builder)]
         (with-open [reader (io/reader (.getInputStream process))]
           (let [output (slurp reader)
-                exit-code (.waitFor process 120 TimeUnit/SECONDS)]
-            (if (zero? exit-code)
+                correct? (.waitFor process 120 TimeUnit/SECONDS)]
+            (if correct?
               (let [steps (parse-spawningtool-output output)
-                    bo-id (:id (create-build-order bo-meta))
+                    bo-id (create-build-order bo-meta)
                     steps-with-bo-id (mapv (fn [step idx]
                                              (assoc step :build-order-id bo-id :sort-order idx))
                                            steps (range))]
@@ -147,6 +148,15 @@
         {:status 500 :body {:error (.getMessage e)}})
       (finally
         (Files/delete replay-file)))))
+
+(defn replay-upload [request]
+  (let [file-data (get-in request [:params :file])
+        bo-meta (dissoc (:params request) :file)
+        file-stream (:tempfile file-data)
+        file-name (or (:filename file-data) "replay.SC2Replay")]
+    (if-not file-stream
+      {:status 400 :body {:error "No file uploaded"}}
+      (parse-replay-upload file-stream file-name bo-meta))))
 
 ;; ─── Public routes (no auth required) ──────────────────────────
 (defroutes public-routes
@@ -173,14 +183,7 @@
   (DELETE "/api/build-orders/:id/steps/:step-id" [id step-id]
     (delete-step (Integer/parseInt step-id)))
 
-  (POST "/api/replay/upload" [request]
-    (let [file-data (get-in request [:params "file"])
-          file-stream (:tempfile file-data)
-          file-name (or (:filename file-data) "replay.SC2Replay")
-          bo-meta (:body request)]
-      (if-not file-stream
-        {:status 400 :body {:error "No file uploaded"}}
-        (parse-replay-upload file-stream file-name bo-meta)))))
+  (POST "/api/replay/upload" [] replay-upload))
 
-(defroutes build-order-routes-with-middleware
+(defroutes build-order-routes
   (routes public-routes (auth/auth-middleware protected-routes)))

@@ -313,7 +313,7 @@
                                 :timeout 120000
                                 :body form-data
                                 :response-format (ajax/json-response-format {:keywords? true})
-                                :headers (assoc (auth-headers db) "Content-Type" nil)
+                                 :headers (auth-headers db)
                                 :on-success [:upload-replay-success]
                                 :on-failure [:upload-replay-failure]}})))
 
@@ -329,13 +329,19 @@
 
 (reg-event-db :set-upload-name (fn [db [_ val]] (assoc db :upload-name val)))
 (reg-event-db :set-upload-author (fn [db [_ val]] (assoc db :upload-author val)))
-(reg-event-db :set-upload-playstyle (fn [db [_ val]] (assoc db :upload-play_style val)))
+(reg-event-db :set-upload-playstyle (fn [db [_ val]] (assoc db :upload-play-style val)))
 (reg-event-db :set-upload-strategic-goals (fn [db [_ val]] (assoc db :upload-strategic_goals val)))
 (reg-event-db :set-upload-counters (fn [db [_ val]] (assoc db :upload-counters val)))
 (reg-event-db :set-upload-weaknesses (fn [db [_ val]] (assoc db :upload-weaknesses val)))
 (reg-event-db :set-upload-transition-plan (fn [db [_ val]] (assoc db :upload-transition_plan val)))
 (reg-event-db :set-upload-youtube-url (fn [db [_ val]] (assoc db :upload-youtube_url val)))
 (reg-event-db :set-upload-error (fn [db [_ val]] (assoc db :upload-error val)))
+
+(reg-event-db :set-upload-selected-file (fn [db [_ file]]
+                                          (assoc db :upload-selected-file file)))
+
+(reg-event-db :clear-upload-selected-file (fn [db _]
+                                            (assoc db :upload-selected-file nil)))
 
 (reg-event-db :reset-upload-form (fn [db _]
                                    (-> db

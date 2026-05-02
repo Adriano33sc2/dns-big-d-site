@@ -13,6 +13,7 @@
    :build-orders []
    :selected-build-order nil
    :loading? false
-   :upload-modal-open? false
-    :replay-uploading? false
+    :upload-modal-open? false
+     :replay-uploading? false
+     :upload-selected-file nil
     :current-route :home})

@@ -635,7 +635,7 @@
       (if-not bo
         [:div.bo-page-header
          [:h1.page-title "Build Order Not Found"]]
-        [:<>
+        [:div
          [:div.bo-detail-header
           (if (= (:id bo) edit-bo-id)
             [:<>
@@ -771,22 +771,25 @@
                                                                                            {:supply 0 :time-seconds 0 :action-name "" :notes "" :sort-order (count (:steps bo))}])}
              "+ Add Step"])]]))))
 
+(def file-input-ref (r/atom nil))
+(def selected-file (r/atom nil))
+
 (defn- replay-upload-modal []
   (let [open? @(rf/subscribe [:upload-modal-open?])
         uploading? @(rf/subscribe [:replay-uploading?])
-        error @(rf/subscribe [:upload-error])
-        file-input-ref (r/atom nil)
-        selected-file (r/atom nil)]
+        error @(rf/subscribe [:upload-error])]
     (when open?
       [:div.upload-overlay
        {:on-click #(do
                      (rf/dispatch [:close-upload-modal])
-                     (reset! selected-file nil))}
+                     (reset! selected-file nil)
+                     (when @file-input-ref (.setValue ^js @file-input-ref "")))}
        [:div.upload-content
         {:on-click #(.stopPropagation %)}
         [:button.upload-close {:on-click #(do
                                             (rf/dispatch [:close-upload-modal])
-                                            (reset! selected-file nil))} "✕"]
+                                            (reset! selected-file nil)
+                                            (when @file-input-ref (.setValue ^js @file-input-ref "")))} "✕"]
         [:h2.upload-title "Upload Replay"]
         [:p.upload-subtitle "Upload a .SC2Replay file and we'll extract the build order automatically."]
          [:div.upload-form
@@ -808,7 +811,7 @@
             {:on-click #(when @file-input-ref (.click @file-input-ref))}
             "Browse Files"]
            (when @selected-file
-             [:div.upload-selected-name [(.-name @selected-file)]])]
+             [:div.upload-selected-name (.-name @selected-file)])]
           [:div.upload-field
            [:label.upload-label "Build Order Name"]
            [:input.upload-input {:type "text" :id "bo-name" :placeholder "e.g. 14 Pylon Expand"
@@ -899,7 +902,7 @@
   (case route
     :build-order-detail [build-order-detail]
     :build-orders-list [build-order-list]
-    [:<>
+    [:div
      [hero]
      [divider]
      [cards-section]
