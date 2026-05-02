@@ -594,6 +594,7 @@
   (fn []
     (let [orders @(rf/subscribe [:build-orders])
           logged-in? @(rf/subscribe [:is-logged-in?])]
+      (cljs.pprint/pprint orders)
       [:div
        [:div.bo-page-header
         [:h1.page-title "Build Orders"]
@@ -606,19 +607,19 @@
           [:div.bo-empty "No build orders yet."]
           (doall
             (for [bo orders]
-              ^{:key (:id bo)}
+              ^{:key (:build_orders/id bo)}
               [:div.bo-card
-               {:on-click #(js/window.location.assign (str "/build-orders/" (:id bo)))}
+               {:on-click #(js/window.location.assign (str "/build-orders/" (:build_orders/id bo)))}
                [:div.bo-card-race
-                (when (:play_style bo)
-                  [:span.race-badge (:play_style bo)])]
+                (when (:build_orders/play_style bo)
+                  [:span.race-badge (:build_orders/play_style bo)])]
                (when logged-in?
                  [:div.bo-card-delete
                   {:on-click #(do (.stopPropagation %)
-                                  (rf/dispatch [:set-delete-confirm {:type :bo :id (:id bo)}]))}
+                                  (rf/dispatch [:set-delete-confirm {:type :bo :id (:build_orders/id bo)}]))}
                   "🗑"])
-               [:h3.bo-card-title (:name bo)]
-               [:p.bo-card-author "by " (:author bo)]])))]
+               [:h3.bo-card-title (:build_orders/name bo)]
+               [:p.bo-card-author "by " (:build_orders/author bo)]])))]
        ]
       ;; 1. Open the header vector
 
@@ -911,7 +912,6 @@
 
 (defn app []
   (let [active-nav @(rf/subscribe [:current-route])]
-    (println active-nav)
     [:div.flex.flex-col.min-h-screen.bg-white
      [header]
      [:div.flex-grow

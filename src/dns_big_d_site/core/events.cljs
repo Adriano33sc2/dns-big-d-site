@@ -213,7 +213,7 @@
                               :on-failure [:fetch-bo-failure]}}))
 
 (reg-event-db :fetch-bo-success (fn [db [_ response]]
-                                  (assoc db :build-orders (:body response))))
+                                  (assoc db :build-orders (:build-orders response))))
 
 (reg-event-db :fetch-bo-failure (fn [db [_ _]]
                                   db))
