@@ -774,84 +774,102 @@
 (defn- replay-upload-modal []
   (let [open? @(rf/subscribe [:upload-modal-open?])
         uploading? @(rf/subscribe [:replay-uploading?])
-        error @(rf/subscribe [:upload-error])]
+        error @(rf/subscribe [:upload-error])
+        file-input-ref (r/atom nil)
+        selected-file (r/atom nil)]
     (when open?
       [:div.upload-overlay
-       {:on-click #(rf/dispatch [:close-upload-modal])}
+       {:on-click #(do
+                     (rf/dispatch [:close-upload-modal])
+                     (reset! selected-file nil))}
        [:div.upload-content
         {:on-click #(.stopPropagation %)}
-        [:button.upload-close {:on-click #(rf/dispatch [:close-upload-modal])} "✕"]
+        [:button.upload-close {:on-click #(do
+                                            (rf/dispatch [:close-upload-modal])
+                                            (reset! selected-file nil))} "✕"]
         [:h2.upload-title "Upload Replay"]
         [:p.upload-subtitle "Upload a .SC2Replay file and we'll extract the build order automatically."]
-        [:form.upload-form
-         {:on-submit #(do (.preventDefault %)
-                          (let [target (-> % .-target)
-                                file-input (aget target "file")
-                                 files (. file-input -files)
-                                 file (aget files 0)]
-                            (if-not file
-                              (rf/dispatch [:set-upload-error "Please select a replay file"])
-                              (do
-                                (rf/dispatch [:set-replay-uploading true])
-                                (rf/dispatch [:set-upload-error nil])
-                                (let [bo-meta {:name @(rf/subscribe [:upload-name])
-                                               :author @(rf/subscribe [:upload-author])
-                                               :play_style @(rf/subscribe [:upload-playstyle])
-                                               :strategic_goals @(rf/subscribe [:upload-strategic-goals])
-                                               :counters @(rf/subscribe [:upload-counters])
-                                               :weaknesses @(rf/subscribe [:upload-weaknesses])
-                                               :transition_plan @(rf/subscribe [:upload-transition-plan])
-                                               :youtube_url @(rf/subscribe [:upload-youtube-url])}]
-                                  (rf/dispatch [:upload-replay file bo-meta]))))))}
-         [:div.upload-field
-          [:label.upload-label "Replay File (.SC2Replay)"]
-          [:input.upload-file {:type "file" :id "file" :name "file" :accept ".SC2Replay"}]]
-         [:div.upload-field
-          [:label.upload-label "Build Order Name"]
-          [:input.upload-input {:type "text" :id "bo-name" :placeholder "e.g. 14 Pylon Expand"
-                                :value @(rf/subscribe [:upload-name])
-                                :on-change #(rf/dispatch [:set-upload-name (-> % .-target .-value)])}]]
-         [:div.upload-field
-          [:label.upload-label "Author"]
-          [:input.upload-input {:type "text" :id "bo-author" :placeholder "Author name"
-                                :value @(rf/subscribe [:upload-author])
-                                :on-change #(rf/dispatch [:set-upload-author (-> % .-target .-value)])}]]
-         [:div.upload-field
-          [:label.upload-label "Play Style"]
-          [:input.upload-input {:type "text" :id "bo-playstyle" :placeholder "e.g. Protoss, Terran, Zerg"
-                                :value @(rf/subscribe [:upload-playstyle])
-                                :on-change #(rf/dispatch [:set-upload-playstyle (-> % .-target .-value)])}]]
-         [:div.upload-field
-          [:label.upload-label "Strategic Goals"]
-          [:textarea.upload-input {:id "bo-strategic-goals" :placeholder "Main goals of this build"
-                                   :value @(rf/subscribe [:upload-strategic-goals])
-                                   :on-change #(rf/dispatch [:set-upload-strategic-goals (-> % .-target .-value)])}]]
-         [:div.upload-field
-          [:label.upload-label "Counters"]
-          [:textarea.upload-input {:id "bo-counters" :placeholder "What this build counters"
-                                   :value @(rf/subscribe [:upload-counters])
-                                   :on-change #(rf/dispatch [:set-upload-counters (-> % .-target .-value)])}]]
-         [:div.upload-field
-          [:label.upload-label "Weaknesses"]
-          [:textarea.upload-input {:id "bo-weaknesses" :placeholder "Build weaknesses"
-                                   :value @(rf/subscribe [:upload-weaknesses])
-                                   :on-change #(rf/dispatch [:set-upload-weaknesses (-> % .-target .-value)])}]]
-         [:div.upload-field
-          [:label.upload-label "Transition Plan"]
-          [:textarea.upload-input {:id "bo-transition-plan" :placeholder "What to do if build doesn't win"
-                                   :value @(rf/subscribe [:upload-transition-plan])
-                                   :on-change #(rf/dispatch [:set-upload-transition-plan (-> % .-target .-value)])}]]
-         [:div.upload-field
-          [:label.upload-label "YouTube URL (optional)"]
-          [:input.upload-input {:type "text" :id "bo-youtube-url" :placeholder "https://www.youtube.com/watch?v=..."
-                                :value @(rf/subscribe [:upload-youtube-url])
-                                :on-change #(rf/dispatch [:set-upload-youtube-url (-> % .-target .-value)])}]]
-         (when error
-           [:div.upload-error-msg error])
-         (when uploading?
-           [:div.upload-loading "Parsing replay... This may take a moment."])
-         [:button.upload-submit {:type "submit" :disabled uploading?}
-          (if uploading? "Parsing..." "Upload & Parse")]]]])))
+         [:div.upload-form
+          [:div.upload-field
+           [:label.upload-label "Replay File (.SC2Replay)"]
+           [:input.upload-file-hidden {:type "file" :id "file" :accept ".SC2Replay"
+                                       :ref #(reset! file-input-ref %)
+                                       :on-change #(let [files (.. % -target -files)]
+                                                     (when (and files (> (.-length files) 0))
+                                                       (reset! selected-file (aget files 0))))}]]
+          [:div.upload-drop-zone
+           {:class (if @selected-file "bg-upload-selected" "hover:bg-gray-50")
+            :on-drag-over #(.preventDefault %)
+            :on-drop #(do (.preventDefault %)
+                          (let [files (.. % -dataTransfer -files)]
+                            (when (and files (> (.-length files) 0))
+                              (reset! selected-file (aget files 0)))))}
+           [:button.upload-browse-btn
+            {:on-click #(when @file-input-ref (.click @file-input-ref))}
+            "Browse Files"]
+           (when @selected-file
+             [:div.upload-selected-name [(.-name @selected-file)]])]
+          [:div.upload-field
+           [:label.upload-label "Build Order Name"]
+           [:input.upload-input {:type "text" :id "bo-name" :placeholder "e.g. 14 Pylon Expand"
+                                 :value @(rf/subscribe [:upload-name])
+                                 :on-change #(rf/dispatch [:set-upload-name (-> % .-target .-value)])}]]
+          [:div.upload-field
+           [:label.upload-label "Author"]
+           [:input.upload-input {:type "text" :id "bo-author" :placeholder "Author name"
+                                 :value @(rf/subscribe [:upload-author])
+                                 :on-change #(rf/dispatch [:set-upload-author (-> % .-target .-value)])}]]
+          [:div.upload-field
+           [:label.upload-label "Play Style"]
+           [:input.upload-input {:type "text" :id "bo-playstyle" :placeholder "e.g. Protoss, Terran, Zerg"
+                                 :value @(rf/subscribe [:upload-playstyle])
+                                 :on-change #(rf/dispatch [:set-upload-playstyle (-> % .-target .-value)])}]]
+          [:div.upload-field
+           [:label.upload-label "Strategic Goals"]
+           [:textarea.upload-input {:id "bo-strategic-goals" :placeholder "Main goals of this build"
+                                    :value @(rf/subscribe [:upload-strategic-goals])
+                                    :on-change #(rf/dispatch [:set-upload-strategic-goals (-> % .-target .-value)])}]]
+          [:div.upload-field
+           [:label.upload-label "Counters"]
+           [:textarea.upload-input {:id "bo-counters" :placeholder "What this build counters"
+                                    :value @(rf/subscribe [:upload-counters])
+                                    :on-change #(rf/dispatch [:set-upload-counters (-> % .-target .-value)])}]]
+          [:div.upload-field
+           [:label.upload-label "Weaknesses"]
+           [:textarea.upload-input {:id "bo-weaknesses" :placeholder "Build weaknesses"
+                                    :value @(rf/subscribe [:upload-weaknesses])
+                                    :on-change #(rf/dispatch [:set-upload-weaknesses (-> % .-target .-value)])}]]
+          [:div.upload-field
+           [:label.upload-label "Transition Plan"]
+           [:textarea.upload-input {:id "bo-transition-plan" :placeholder "What to do if build doesn't win"
+                                    :value @(rf/subscribe [:upload-transition-plan])
+                                    :on-change #(rf/dispatch [:set-upload-transition-plan (-> % .-target .-value)])}]]
+          [:div.upload-field
+           [:label.upload-label "YouTube URL (optional)"]
+           [:input.upload-input {:type "text" :id "bo-youtube-url" :placeholder "https://www.youtube.com/watch?v=..."
+                                 :value @(rf/subscribe [:upload-youtube-url])
+                                 :on-change #(rf/dispatch [:set-upload-youtube-url (-> % .-target .-value)])}]]
+          (when error
+            [:div.upload-error-msg error])
+          (when uploading?
+            [:div.upload-loading "Parsing replay... This may take a moment."])
+          [:button.upload-submit {:type "button" :disabled uploading?
+                                  :on-click #(if-not @selected-file
+                                               (rf/dispatch [:set-upload-error "Please select a replay file"])
+                                               (do
+                                                 (rf/dispatch [:set-replay-uploading true])
+                                                 (rf/dispatch [:set-upload-error nil])
+                                                 (let [file @selected-file
+                                                       bo-meta {:name @(rf/subscribe [:upload-name])
+                                                                :author @(rf/subscribe [:upload-author])
+                                                                :play_style @(rf/subscribe [:upload-playstyle])
+                                                                :strategic_goals @(rf/subscribe [:upload-strategic-goals])
+                                                                :counters @(rf/subscribe [:upload-counters])
+                                                                :weaknesses @(rf/subscribe [:upload-weaknesses])
+                                                                :transition_plan @(rf/subscribe [:upload-transition-plan])
+                                                                :youtube_url @(rf/subscribe [:upload-youtube-url])}]
+                                                   (rf/dispatch [:upload-replay file bo-meta]))))}
+           (if uploading? "Parsing..." "Upload & Parse")]]]])))
 
 ;; ─── Delete Confirm Modal ──────────────────────────────────────
 
@@ -893,7 +911,8 @@
     (println active-nav)
     [:div.flex.flex-col.min-h-screen.bg-white
      [header]
-     [:div.flex-grow [nav-pages active-nav]]
+     [:div.flex-grow
+      [nav-pages active-nav]]
      [footer-component]
      [login-modal]
      [booking-modal]

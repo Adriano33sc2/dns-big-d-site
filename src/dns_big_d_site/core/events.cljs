@@ -304,8 +304,6 @@
 
 (reg-event-fx :upload-replay
               (fn [{:keys [db]} [_ file bo-meta]]
-                (println "File: " file)
-                (println "BOMeta: " bo-meta)
                 (let [form-data (js/FormData.)]
                   (.append form-data "file" file)
                   (doseq [[k v] bo-meta]
@@ -313,7 +311,7 @@
                   {:http-xhrio {:method :post
                                 :uri (str (api-url) "/api/replay/upload")
                                 :timeout 120000
-                                :params form-data
+                                :body form-data
                                 :response-format (ajax/json-response-format {:keywords? true})
                                 :headers (assoc (auth-headers db) "Content-Type" nil)
                                 :on-success [:upload-replay-success]

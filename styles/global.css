@@ -1539,6 +1539,47 @@ footer {
   cursor: not-allowed;
 }
 
+.upload-file-hidden {
+  display: none;
+}
+
+.upload-drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: background-color 0.15s ease;
+}
+
+.upload-drop-zone:hover {
+  background: rgba(255,215,0,0.03);
+}
+
+.bg-upload-selected {
+  background: rgba(255,215,0,0.05);
+}
+
+.upload-browse-btn {
+  background: var(--blue);
+  color: white;
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.upload-browse-btn:hover {
+  background: #0066cc;
+}
+
+.upload-selected-name {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--gold);
+}
+
 /* ─── RESPONSIVE ─────────────────────────────────────────────────── */
 @media (max-width: 700px) {
   header     { padding: 1.2rem 1.5rem; }
