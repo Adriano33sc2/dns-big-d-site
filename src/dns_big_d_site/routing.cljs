@@ -7,15 +7,11 @@
         "build-orders" :build-orders-list
         ["build-orders/" :id] :build-order-detail}])
 
-(defn- navigate-to [path]
-  (js/history.pushState nil "" path))
-
 (rf/reg-event-fx :navigate
   (fn [{:keys [db]} [_ route]]
     (cond-> {:dispatch [:set-current-route route]
              :db (assoc db :current-route route)}
-      (= route :build-orders-list)
-      (assoc :dispatch [:fetch-build-orders]))))
+      (= route :build-orders-list) (assoc :dispatch [:fetch-build-orders]))))
 
 (rf/reg-event-db :set-current-route
                  (fn [db [_ route]]

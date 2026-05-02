@@ -252,7 +252,7 @@
      [:a {:href "#programs"} (t :nav/programs)]
      [:a {:href "#discord"} (t :nav/community)]
      [:a {:href "#youtube"} (t :nav/youtube)]
-        [:a {:href "#build-orders" :on-click #(do (.preventDefault %) (js/history.pushState nil "" "/build-orders") (rf/dispatch [:navigate :build-orders-list]))} (t :nav/build-orders)]]
+     [:a {:href "#build-orders" :on-click #(do (.preventDefault %) (js/history.pushState nil "" "/build-orders") (rf/dispatch [:navigate :build-orders-list]))} (t :nav/build-orders)]]
     [lang-switcher]]])
 
 ;; ─── Hero ───────────────────────────────────────────────────────
@@ -609,7 +609,10 @@
             (for [bo orders]
               ^{:key (:build_orders/id bo)}
               [:div.bo-card
-               {:on-click #(js/window.location.assign (str "/build-orders/" (:build_orders/id bo)))}
+               {:on-click #(do
+                             (rf/dispatch-sync [:set-selected-build-order bo])
+                             (rf/dispatch-sync [:set-edit-bo-id (:build_orders/id bo)])
+                             (rf/dispatch-sync [:navigate :build-order-detail]))}
                [:div.bo-card-race
                 (when (:build_orders/play_style bo)
                   [:span.race-badge (:build_orders/play_style bo)])]
@@ -645,20 +648,20 @@
             [:h1.page-title (:name bo)])
           (when logged-in?
             [:div.bo-detail-actions
-             [:button.btn.btn-outline {:on-click #(js/window.location.assign "/build-orders")} "← Back to List"]
+             [:button.btn.btn-outline {:on-click #(rf/dispatch-sync [:build-orders-list])} "← Back to List"]
              (if (= (:id bo) edit-bo-id)
                [:<>
                 [:button.btn.btn-gold {:on-click #(rf/dispatch [:update-build-order-api (:id bo)
-                                                                       {:name (:name bo)
-                                                                        :author (:author bo)
-                                                                        :play_style (:play_style bo)
-                                                                        :youtube_url (:youtube_url bo)
-                                                                        :strategic_goals (:strategic_goals bo)
-                                                                        :counters (:counters bo)
-                                                                        :weaknesses (:weaknesses bo)
-                                                                        :transition_plan (:transition_plan bo)}])} "Save"]
+                                                                {:name (:name bo)
+                                                                 :author (:author bo)
+                                                                 :play_style (:play_style bo)
+                                                                 :youtube_url (:youtube_url bo)
+                                                                 :strategic_goals (:strategic_goals bo)
+                                                                 :counters (:counters bo)
+                                                                 :weaknesses (:weaknesses bo)
+                                                                 :transition_plan (:transition_plan bo)}])} "Save"]
                 [:button.btn.btn-outline {:on-click #(rf/dispatch [:set-edit-bo-id nil])} "Cancel"]]
-              [:button.btn.btn-outline {:on-click #(rf/dispatch [:set-edit-bo-id (:id bo)])} "Edit"])])]
+               [:button.btn.btn-outline {:on-click #(rf/dispatch [:set-edit-bo-id (:id bo)])} "Edit"])])]
          (if (= (:id bo) edit-bo-id)
            [:input.bo-edit-input {:value (:author bo)
                                   :on-change #(rf/dispatch [:update-selected-bo-field :author (-> % .-target .-value)])}]
@@ -715,8 +718,8 @@
           [:h2.section-title "Build Steps"]
           (when logged-in?
             [:button.btn.btn-outline {:on-click #(rf/dispatch [:add-step-api (:id bo)
-                                                                               {:supply 0 :time-seconds 0 :action-name "" :notes "" :sort-order (count (:steps bo))}])}
-              "+ Add Step"])
+                                                               {:supply 0 :time-seconds 0 :action-name "" :notes "" :sort-order (count (:steps bo))}])}
+             "+ Add Step"])
           [:div.bo-steps-table
            [:div.bo-step-row.bo-step-header
             [:div.bo-col.bo-col-supply "Supply"]
@@ -727,49 +730,49 @@
           (doall
             (for [step (:steps bo)
                   :let [edit-mode? (and logged-in? (= (:edit-step-id bo) (:id step)))]]
-                  ^{:key (:id step)}
-                  [:div.bo-step-row
-                   {:class (when edit-mode? "step-editing")}
-                   ;; Supply column
-                   [:div.bo-col.bo-col-supply
-                    (if edit-mode?
-                      [:input.step-input {:type "number" :value (:supply step)
-                                          :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :supply (parse-long (-> % .-target .-value )))])}]
-                      [:span (:supply step)])]
-                   ;; Time column
-                   [:div.bo-col.bo-col-time
-                    (if edit-mode?
-                      [:input.step-input {:type "text" :value (format-time (:time-seconds step))
-                                          :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :time-seconds (parse-time-to-seconds (-> % .-target .-value)))])}]
-                      [:span (format-time (:time-seconds step))])]
-                   ;; Action column
-                   [:div.bo-col.bo-col-action
-                    [action-icon (:action_name step)]
-                    (if edit-mode?
-                      [:input.step-input {:value (:action_name step)
-                                          :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :action_name (-> % .-target .-value))])}]
-                      [:span.action-text (:action_name step)])]
-                   ;; Notes column
-                   [:div.bo-col.bo-col-notes
-                    (if edit-mode?
-                      [:input.step-input {:value (:notes step) :placeholder "e.g. chronoboost"
-                                          :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :notes (-> % .-target .-value))])}]
-                      [:span (:notes step)])]
-                   ;; Actions column (logged in)
-                   (when logged-in?
-                     [:div.bo-col.bo-col-actions
-                      (if edit-mode?
-                        [:<>
-                         [:button.btn-step.save {:on-click #(do (rf/dispatch [:update-step-api (:id step)
-                                                                                                              (dissoc step :edit-step-id)])
-                                                                (rf/dispatch [:update-selected-bo-field :edit-step-id nil]))} "Save"]
-                         [:button.btn-step.cancel {:on-click #(rf/dispatch [:update-selected-bo-field :edit-step-id nil])} "Cancel"]]
-                        [:<>
-                         [:button.btn-step.edit {:on-click #(rf/dispatch [:update-selected-bo-field :edit-step-id (:id step)])} "Edit"]
-                         [:button.btn-step.delete {:on-click #(rf/dispatch [:set-delete-confirm {:type :step :id (:id step)}])} "Delete"]])])]))
+              ^{:key (:id step)}
+              [:div.bo-step-row
+               {:class (when edit-mode? "step-editing")}
+               ;; Supply column
+               [:div.bo-col.bo-col-supply
+                (if edit-mode?
+                  [:input.step-input {:type "number" :value (:supply step)
+                                      :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :supply (parse-long (-> % .-target .-value)))])}]
+                  [:span (:supply step)])]
+               ;; Time column
+               [:div.bo-col.bo-col-time
+                (if edit-mode?
+                  [:input.step-input {:type "text" :value (format-time (:time-seconds step))
+                                      :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :time-seconds (parse-time-to-seconds (-> % .-target .-value)))])}]
+                  [:span (format-time (:time-seconds step))])]
+               ;; Action column
+               [:div.bo-col.bo-col-action
+                [action-icon (:action_name step)]
+                (if edit-mode?
+                  [:input.step-input {:value (:action_name step)
+                                      :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :action_name (-> % .-target .-value))])}]
+                  [:span.action-text (:action_name step)])]
+               ;; Notes column
+               [:div.bo-col.bo-col-notes
+                (if edit-mode?
+                  [:input.step-input {:value (:notes step) :placeholder "e.g. chronoboost"
+                                      :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :notes (-> % .-target .-value))])}]
+                  [:span (:notes step)])]
+               ;; Actions column (logged in)
+               (when logged-in?
+                 [:div.bo-col.bo-col-actions
+                  (if edit-mode?
+                    [:<>
+                     [:button.btn-step.save {:on-click #(do (rf/dispatch [:update-step-api (:id step)
+                                                                          (dissoc step :edit-step-id)])
+                                                            (rf/dispatch [:update-selected-bo-field :edit-step-id nil]))} "Save"]
+                     [:button.btn-step.cancel {:on-click #(rf/dispatch [:update-selected-bo-field :edit-step-id nil])} "Cancel"]]
+                    [:<>
+                     [:button.btn-step.edit {:on-click #(rf/dispatch [:update-selected-bo-field :edit-step-id (:id step)])} "Edit"]
+                     [:button.btn-step.delete {:on-click #(rf/dispatch [:set-delete-confirm {:type :step :id (:id step)}])} "Delete"]])])]))
           (when logged-in?
             [:button.btn.btn-outline {:on-click #(rf/dispatch [:add-step-api (:id bo)
-                                                                                           {:supply 0 :time-seconds 0 :action-name "" :notes "" :sort-order (count (:steps bo))}])}
+                                                               {:supply 0 :time-seconds 0 :action-name "" :notes "" :sort-order (count (:steps bo))}])}
              "+ Add Step"])]]))))
 
 (def file-input-ref (r/atom nil))
@@ -793,87 +796,87 @@
                                             (when @file-input-ref (.setValue ^js @file-input-ref "")))} "✕"]
         [:h2.upload-title "Upload Replay"]
         [:p.upload-subtitle "Upload a .SC2Replay file and we'll extract the build order automatically."]
-         [:div.upload-form
-          [:div.upload-field
-           [:label.upload-label "Replay File (.SC2Replay)"]
-           [:input.upload-file-hidden {:type "file" :id "file" :accept ".SC2Replay"
-                                       :ref #(reset! file-input-ref %)
-                                       :on-change #(let [files (.. % -target -files)]
-                                                     (when (and files (> (.-length files) 0))
-                                                       (reset! selected-file (aget files 0))))}]]
-          [:div.upload-drop-zone
-           {:class (if @selected-file "bg-upload-selected" "hover:bg-gray-50")
-            :on-drag-over #(.preventDefault %)
-            :on-drop #(do (.preventDefault %)
-                          (let [files (.. % -dataTransfer -files)]
-                            (when (and files (> (.-length files) 0))
-                              (reset! selected-file (aget files 0)))))}
-           [:button.upload-browse-btn
-            {:on-click #(when @file-input-ref (.click @file-input-ref))}
-            "Browse Files"]
-           (when @selected-file
-             [:div.upload-selected-name (.-name @selected-file)])]
-          [:div.upload-field
-           [:label.upload-label "Build Order Name"]
-           [:input.upload-input {:type "text" :id "bo-name" :placeholder "e.g. 14 Pylon Expand"
-                                 :value @(rf/subscribe [:upload-name])
-                                 :on-change #(rf/dispatch [:set-upload-name (-> % .-target .-value)])}]]
-          [:div.upload-field
-           [:label.upload-label "Author"]
-           [:input.upload-input {:type "text" :id "bo-author" :placeholder "Author name"
-                                 :value @(rf/subscribe [:upload-author])
-                                 :on-change #(rf/dispatch [:set-upload-author (-> % .-target .-value)])}]]
-          [:div.upload-field
-           [:label.upload-label "Play Style"]
-           [:input.upload-input {:type "text" :id "bo-playstyle" :placeholder "e.g. Protoss, Terran, Zerg"
-                                 :value @(rf/subscribe [:upload-playstyle])
-                                 :on-change #(rf/dispatch [:set-upload-playstyle (-> % .-target .-value)])}]]
-          [:div.upload-field
-           [:label.upload-label "Strategic Goals"]
-           [:textarea.upload-input {:id "bo-strategic-goals" :placeholder "Main goals of this build"
-                                    :value @(rf/subscribe [:upload-strategic-goals])
-                                    :on-change #(rf/dispatch [:set-upload-strategic-goals (-> % .-target .-value)])}]]
-          [:div.upload-field
-           [:label.upload-label "Counters"]
-           [:textarea.upload-input {:id "bo-counters" :placeholder "What this build counters"
-                                    :value @(rf/subscribe [:upload-counters])
-                                    :on-change #(rf/dispatch [:set-upload-counters (-> % .-target .-value)])}]]
-          [:div.upload-field
-           [:label.upload-label "Weaknesses"]
-           [:textarea.upload-input {:id "bo-weaknesses" :placeholder "Build weaknesses"
-                                    :value @(rf/subscribe [:upload-weaknesses])
-                                    :on-change #(rf/dispatch [:set-upload-weaknesses (-> % .-target .-value)])}]]
-          [:div.upload-field
-           [:label.upload-label "Transition Plan"]
-           [:textarea.upload-input {:id "bo-transition-plan" :placeholder "What to do if build doesn't win"
-                                    :value @(rf/subscribe [:upload-transition-plan])
-                                    :on-change #(rf/dispatch [:set-upload-transition-plan (-> % .-target .-value)])}]]
-          [:div.upload-field
-           [:label.upload-label "YouTube URL (optional)"]
-           [:input.upload-input {:type "text" :id "bo-youtube-url" :placeholder "https://www.youtube.com/watch?v=..."
-                                 :value @(rf/subscribe [:upload-youtube-url])
-                                 :on-change #(rf/dispatch [:set-upload-youtube-url (-> % .-target .-value)])}]]
-          (when error
-            [:div.upload-error-msg error])
-          (when uploading?
-            [:div.upload-loading "Parsing replay... This may take a moment."])
-          [:button.upload-submit {:type "button" :disabled uploading?
-                                  :on-click #(if-not @selected-file
-                                               (rf/dispatch [:set-upload-error "Please select a replay file"])
-                                               (do
-                                                 (rf/dispatch [:set-replay-uploading true])
-                                                 (rf/dispatch [:set-upload-error nil])
-                                                 (let [file @selected-file
-                                                       bo-meta {:name @(rf/subscribe [:upload-name])
-                                                                :author @(rf/subscribe [:upload-author])
-                                                                :play_style @(rf/subscribe [:upload-playstyle])
-                                                                :strategic_goals @(rf/subscribe [:upload-strategic-goals])
-                                                                :counters @(rf/subscribe [:upload-counters])
-                                                                :weaknesses @(rf/subscribe [:upload-weaknesses])
-                                                                :transition_plan @(rf/subscribe [:upload-transition-plan])
-                                                                :youtube_url @(rf/subscribe [:upload-youtube-url])}]
-                                                   (rf/dispatch [:upload-replay file bo-meta]))))}
-           (if uploading? "Parsing..." "Upload & Parse")]]]])))
+        [:div.upload-form
+         [:div.upload-field
+          [:label.upload-label "Replay File (.SC2Replay)"]
+          [:input.upload-file-hidden {:type "file" :id "file" :accept ".SC2Replay"
+                                      :ref #(reset! file-input-ref %)
+                                      :on-change #(let [files (.. % -target -files)]
+                                                    (when (and files (> (.-length files) 0))
+                                                      (reset! selected-file (aget files 0))))}]]
+         [:div.upload-drop-zone
+          {:class (if @selected-file "bg-upload-selected" "hover:bg-gray-50")
+           :on-drag-over #(.preventDefault %)
+           :on-drop #(do (.preventDefault %)
+                         (let [files (.. % -dataTransfer -files)]
+                           (when (and files (> (.-length files) 0))
+                             (reset! selected-file (aget files 0)))))}
+          [:button.upload-browse-btn
+           {:on-click #(when @file-input-ref (.click @file-input-ref))}
+           "Browse Files"]
+          (when @selected-file
+            [:div.upload-selected-name (.-name @selected-file)])]
+         [:div.upload-field
+          [:label.upload-label "Build Order Name"]
+          [:input.upload-input {:type "text" :id "bo-name" :placeholder "e.g. 14 Pylon Expand"
+                                :value @(rf/subscribe [:upload-name])
+                                :on-change #(rf/dispatch [:set-upload-name (-> % .-target .-value)])}]]
+         [:div.upload-field
+          [:label.upload-label "Author"]
+          [:input.upload-input {:type "text" :id "bo-author" :placeholder "Author name"
+                                :value @(rf/subscribe [:upload-author])
+                                :on-change #(rf/dispatch [:set-upload-author (-> % .-target .-value)])}]]
+         [:div.upload-field
+          [:label.upload-label "Play Style"]
+          [:input.upload-input {:type "text" :id "bo-playstyle" :placeholder "e.g. Protoss, Terran, Zerg"
+                                :value @(rf/subscribe [:upload-playstyle])
+                                :on-change #(rf/dispatch [:set-upload-playstyle (-> % .-target .-value)])}]]
+         [:div.upload-field
+          [:label.upload-label "Strategic Goals"]
+          [:textarea.upload-input {:id "bo-strategic-goals" :placeholder "Main goals of this build"
+                                   :value @(rf/subscribe [:upload-strategic-goals])
+                                   :on-change #(rf/dispatch [:set-upload-strategic-goals (-> % .-target .-value)])}]]
+         [:div.upload-field
+          [:label.upload-label "Counters"]
+          [:textarea.upload-input {:id "bo-counters" :placeholder "What this build counters"
+                                   :value @(rf/subscribe [:upload-counters])
+                                   :on-change #(rf/dispatch [:set-upload-counters (-> % .-target .-value)])}]]
+         [:div.upload-field
+          [:label.upload-label "Weaknesses"]
+          [:textarea.upload-input {:id "bo-weaknesses" :placeholder "Build weaknesses"
+                                   :value @(rf/subscribe [:upload-weaknesses])
+                                   :on-change #(rf/dispatch [:set-upload-weaknesses (-> % .-target .-value)])}]]
+         [:div.upload-field
+          [:label.upload-label "Transition Plan"]
+          [:textarea.upload-input {:id "bo-transition-plan" :placeholder "What to do if build doesn't win"
+                                   :value @(rf/subscribe [:upload-transition-plan])
+                                   :on-change #(rf/dispatch [:set-upload-transition-plan (-> % .-target .-value)])}]]
+         [:div.upload-field
+          [:label.upload-label "YouTube URL (optional)"]
+          [:input.upload-input {:type "text" :id "bo-youtube-url" :placeholder "https://www.youtube.com/watch?v=..."
+                                :value @(rf/subscribe [:upload-youtube-url])
+                                :on-change #(rf/dispatch [:set-upload-youtube-url (-> % .-target .-value)])}]]
+         (when error
+           [:div.upload-error-msg error])
+         (when uploading?
+           [:div.upload-loading "Parsing replay... This may take a moment."])
+         [:button.upload-submit {:type "button" :disabled uploading?
+                                 :on-click #(if-not @selected-file
+                                              (rf/dispatch [:set-upload-error "Please select a replay file"])
+                                              (do
+                                                (rf/dispatch [:set-replay-uploading true])
+                                                (rf/dispatch [:set-upload-error nil])
+                                                (let [file @selected-file
+                                                      bo-meta {:name @(rf/subscribe [:upload-name])
+                                                               :author @(rf/subscribe [:upload-author])
+                                                               :play_style @(rf/subscribe [:upload-playstyle])
+                                                               :strategic_goals @(rf/subscribe [:upload-strategic-goals])
+                                                               :counters @(rf/subscribe [:upload-counters])
+                                                               :weaknesses @(rf/subscribe [:upload-weaknesses])
+                                                               :transition_plan @(rf/subscribe [:upload-transition-plan])
+                                                               :youtube_url @(rf/subscribe [:upload-youtube-url])}]
+                                                  (rf/dispatch [:upload-replay file bo-meta]))))}
+          (if uploading? "Parsing..." "Upload & Parse")]]]])))
 
 ;; ─── Delete Confirm Modal ──────────────────────────────────────
 
@@ -912,6 +915,7 @@
 
 (defn app []
   (let [active-nav @(rf/subscribe [:current-route])]
+    (println active-nav)
     [:div.flex.flex-col.min-h-screen.bg-white
      [header]
      [:div.flex-grow

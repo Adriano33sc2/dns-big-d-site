@@ -123,7 +123,7 @@
   (db/execute! "DELETE FROM build_order_steps WHERE id = ?" step-id)
   {:status 204})
 
-(defn- parse-replay-upload [file-stream file-name bo-meta]
+(defn- parse-replay-upload [file-stream bo-meta]
   (let [replay-file (File/createTempFile "replay" ".SC2Replay")]
     (try
       (with-open [out (FileOutputStream. replay-file)]
@@ -142,7 +142,7 @@
                 (doseq [step steps-with-bo-id]
                   (add-step bo-id step))
                 {:status 201
-                 :body nil #_(get-build-order bo-id)})
+                 :body (get-build-order-by-id {:id bo-id})})
               {:status 500 :body {:error "Spawningtool parsing failed"}}))))
       (catch Exception e
         {:status 500 :body {:error (.getMessage e)}})
@@ -152,11 +152,10 @@
 (defn replay-upload [request]
   (let [file-data (get-in request [:params :file])
         bo-meta (dissoc (:params request) :file)
-        file-stream (:tempfile file-data)
-        file-name (or (:filename file-data) "replay.SC2Replay")]
+        file-stream (:tempfile file-data)]
     (if-not file-stream
       {:status 400 :body {:error "No file uploaded"}}
-      (parse-replay-upload file-stream file-name bo-meta))))
+      (parse-replay-upload file-stream bo-meta))))
 
 ;; ─── Public routes (no auth required) ──────────────────────────
 (defroutes public-routes
