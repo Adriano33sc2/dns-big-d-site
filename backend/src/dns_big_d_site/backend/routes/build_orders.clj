@@ -141,7 +141,8 @@
     (try
       (with-open [out (FileOutputStream. replay-file)]
         (io/copy file-stream out))
-      (let [process-builder (ProcessBuilder. ["/Users/iceman/sc2-replay-test/bin/python" "-m" "spawningtool" (str replay-file) "--build"])
+      (let [python-bin (or (System/getenv "PYTHON_BIN") "python")
+            process-builder (ProcessBuilder. [python-bin "-m" "spawningtool" (str replay-file) "--build"])
             process (.start process-builder)]
         (with-open [reader (io/reader (.getInputStream process))]
           (let [output (slurp reader)
