@@ -73,24 +73,26 @@
                             name author play_style strategic_goals counters weaknesses transition_plan youtube_url)]
     (:build_orders/id id)))
 
-(defn- update-build-order [id params]
-  (let [{:keys [name author play_style strategic_goals counters weaknesses transition_plan youtube_url]} params
-        set-clauses (filter second
-                            [["name" name]
-                             ["author" author]
-                             ["play_style" play_style]
-                             ["strategic_goals" strategic_goals]
-                             ["counters" counters]
-                             ["weaknesses" weaknesses]
-                             ["transition_plan" transition_plan]
-                             ["youtube_url" youtube_url]])
-        set-str (str/join ", " (map #(format "%s = ?" (first %)) set-clauses))
-        set-vals (map second set-clauses)]
-    (when (empty? set-str)
-      (throw (Exception. "No fields to update")))
-    (db/execute! (str "UPDATE build_orders SET " set-str ", updated_at = NOW() WHERE id = ?")
-                 (into set-vals [id]))
-    #_(get-build-order id)))
+(defn- update-build-order [{{:keys [id]} :params {:keys [name author play_style strategic_goals counters weaknesses transition_plan youtube_url]} :body}]
+  (try
+    (let [id (parse-long id)
+          set-clauses (filter second
+                              [["name" name]
+                               ["author" author]
+                               ["play_style" play_style]
+                               ["strategic_goals" strategic_goals]
+                               ["counters" counters]
+                               ["weaknesses" weaknesses]
+                               ["transition_plan" transition_plan]
+                               ["youtube_url" youtube_url]])
+          set-str (str/join ", " (map #(format "%s = ?" (first %)) set-clauses))
+          set-vals (mapv second set-clauses)]
+      (when (empty? set-str)
+        (throw (Exception. "No fields to update")))
+      (apply (partial db/execute! (str "UPDATE build_orders SET " set-str ", updated_at = NOW() WHERE id = ?")) (into set-vals [id]))
+      {:status 200})
+    (catch Exception e
+      {:status 500 :body {:error (.getMessage e)}})))
 
 (defn- delete-build-order [id]
   (db/execute! "DELETE FROM build_order_steps WHERE build_order_id = ?" id)
@@ -113,14 +115,15 @@
 
 (defn- update-step [{{:keys [step-id]} :params {:keys [supply time_seconds action_name notes sort_order]} :body}]
   (try
-    (let [set-clauses (filter second
+    (let [step-id (parse-long step-id)
+          set-clauses (filter second
                               [["supply" supply]
                                ["time_seconds" time_seconds]
                                ["action_name" action_name]
                                ["notes" notes]
                                ["sort_order" sort_order]])
           set-str (str/join ", " (map #(format "%s = ?" (first %)) set-clauses))
-          set-vals (map second set-clauses)]
+          set-vals (mapv second set-clauses)]
       (when (empty? set-str)
         (throw (Exception. "No fields to update")))
       (apply (partial db/execute! (str "UPDATE build_order_steps SET " set-str " WHERE id = ?")) (into set-vals [step-id]))
@@ -130,7 +133,7 @@
       {:status 500 :body {:error (.getMessage e)}})))
 
 (defn- delete-step [{{:keys [step-id]} :params}]
-  (db/execute! "DELETE FROM build_order_steps WHERE id = ?" step-id)
+  (db/execute! "DELETE FROM build_order_steps WHERE id = ?" (parse-long step-id))
   {:status 204})
 
 (defn- parse-replay-upload [file-stream bo-meta]
@@ -176,8 +179,7 @@
   (POST "/api/build-orders" []
     {:status 201 :body #(create-build-order (:body %))})
 
-  (PUT "/api/build-orders/:id" [id]
-    {:status 200 :body #(update-build-order (Integer/parseInt id) (:body %))})
+  (PUT "/api/build-orders/:id" [] update-build-order)
 
   (DELETE "/api/build-orders/:id" [id]
     (delete-build-order (Integer/parseInt id)))

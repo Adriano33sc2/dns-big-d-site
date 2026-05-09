@@ -213,10 +213,11 @@
                                 :on-success [:delete-step-api-success step-id]
                                 :on-failure [:fetch-bo-failure]}})))
 
-(reg-event-db :delete-step-api-success (fn [db [_ _ step-id]]
-                                         (let [bo (:selected-build-order db)]
-                                           (when bo
-                                             (assoc db :selected-build-order (update bo :steps remove #(= (:id %) step-id)))))))
+(reg-event-fx :delete-step-api-success (fn [{:keys [db]} [_ step-id _]]
+                                         (let [bo (:selected-build-order db)
+                                               bo-id (:id bo)]
+                                           {:db (assoc db :delete-confirm nil)
+                                            :dispatch [:fetch-build-order bo-id]})))
 
 ;; -- Build Orders API -----------------------------------------------
 

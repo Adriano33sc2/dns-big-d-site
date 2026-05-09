@@ -637,7 +637,9 @@
     (let [orders @(rf/subscribe [:build-orders])
           logged-in? @(rf/subscribe [:is-logged-in?])]
       [:div.flex.flex-col.min-h-screen.text-white
-       {:style {:background "#030712"}}
+       {:style {:background "#030712"}} ; Dark background matching screenshot
+
+       ;; Header Section
        [:div.flex.items-center.justify-between.px-6.py-8.border-b.border-gray-800
         {:style {:background "rgba(17,24,39,0.5)"}}
         [:h1.text-2xl.font-bold.text-white "Build Orders"]
@@ -645,35 +647,94 @@
           [:button.px-4.py-2.bg-amber-500.hover:bg-amber-600.text-white.font-semibold.rounded-lg.transition-all.shadow-md
            {:on-click #(rf/dispatch [:open-upload-modal])}
            "Upload Replay"])]
+
+       ;; Grid Section
        [:div.grid.grid-cols-1.md:grid-cols-2.lg:grid-cols-3.gap-6.px-6.py-8
         (if (empty? orders)
           [:div.col-span-full.text-center.py-12.text-gray-500 "No build orders yet."]
           (doall
             (for [bo orders]
               ^{:key (:build_orders/id bo)}
-              [:div.relative.border.border-gray-700.rounded-lg.p-5.cursor-pointer.transition-all
-               {:class "bg-gray-800/30 hover:border-amber-500/50 hover:bg-gray-800/60"
+
+              ;; CARD CONTAINER
+              [:div.relative.border-2.border-amber-500-80.rounded-xl.p-6.cursor-pointer.transition-all
+               {:class "bg-slate-900 hover:border-amber-400 hover:shadow-[0_0_15px_rgba(245,158,11,0.3)]"
                 :on-click #(do
                              (.stopPropagation %)
                              (js/history.pushState nil "" (str "/build-orders/" (:build_orders/id bo)))
                              (rf/dispatch [:set-selected-build-order bo])
                              (rf/dispatch [:navigate {:route :build-order-detail :id (str (:build_orders/id bo))}]))}
-               [:div.mb-3]
-               (when (:build_orders/play_style bo)
-                 [:span.inline-block.px-2.py-1.bg-gray-700.text-xs.font-mono.rounded.mb-3
-                  (:build_orders/play_style bo)])
+
+               ;; Delete Button (Top Right)
                (when logged-in?
-                 [:div.absolute.top-3.right-3.cursor-pointer.text-gray-500.hover:text-red-400.transition-colors
+                 [:div.absolute.top-4.right-4.cursor-pointer.text-gray-500.hover:text-red-500.transition-colors.z-10
                   {:on-click #(do (.stopPropagation %)
                                   (rf/dispatch [:set-delete-confirm {:type :bo :id (:build_orders/id bo)}]))}
                   "🗑"])
-               [:h3.text-lg.font-bold.text-white.mb-1 (:build_orders/name bo)]
-               [:p.text-sm.text-gray-400 "by " (:build_orders/author bo)]])))]])))
 
-;; ─── Build Order Detail ─────────────────────────────────────────
-;; FIX: Several large blocks (author field, info-cards grid, youtube section, steps section)
-;;      were floating as top-level forms instead of being inside the main [:div ...].
-;;      Restructured into one properly nested component.
+               ;; Title (Amber/Gold color)
+               [:h3.text-xl.font-bold.text-amber-400.mb-2.line-clamp-1
+                (:build_orders/name bo)]
+
+               ;; Tags / Playstyle (Pill shape, dark bg)
+               [:div.flex.flex-wrap.gap-2.mb-4
+                (when (:build_orders/tags bo) ;; Assuming tags are stored in a vector :tags or similar
+                  (for [tag (:build_orders/tags bo)]
+                    [:span.inline-block.px-2.py-1.bg-gray-800.text-xs.font-medium.rounded-md.text-gray-300
+                     tag]))]
+
+               ;; Description (Gray text, truncated with ...)
+               [:p.text-sm.text-gray-400.line-clamp-3.mb-6.leading-relaxed
+                (:build_orders/play_style bo)]
+
+               ;; Footer Area (Author + View Link)
+               [:div.flex.items-center.justify-between.mt-auto.pt-4.border-t.border-gray-800
+                [:div.text-sm.text-gray-500
+                 "By "
+                 [:span.text-white.font-medium (:build_orders/author bo)]]
+
+                ;; "View Build Order" Link with Play Icon
+                [:div.flex.items-center.gap-2.text-amber-500.font-semibold.cursor-pointer.hover:text-amber-400.transition-colors
+                 [:svg.w-4.h-4.fill-current {:viewBox "0 0 24 24"}
+                  [:path {:d "M8 5v14l11-7z"}]]
+                 [:span.text-sm "View Build Order"]]]])))]])))
+
+
+
+(defn- tag-badge [label]
+  [:span.px-3.py-1.border.border-gray-600.rounded-full.text-xs.font-semibold.text-gray-300.uppercase.tracking-wider
+   label])
+
+(defn- info-card-styled [{:keys [label value color icon bullet-list?]}]
+  (let [border-color (case color
+                       :amber "border-amber-500/40"
+                       :teal  "border-teal-500/40"
+                       :red   "border-red-500/40"
+                       "border-gray-700")
+        bg-color (case color
+                   :amber "rgba(120,53,15,0.15)"
+                   :teal  "rgba(20,184,166,0.08)"
+                   :red   "rgba(185,28,28,0.12)"
+                   "rgba(31,41,55,0.3)")
+        label-color (case color
+                      :amber "text-amber-400"
+                      :teal  "text-teal-400"
+                      :red   "text-red-400"
+                      "text-gray-400")]
+    [:div.border.rounded-xl.p-5
+     {:style {:background bg-color :border-color border-color}
+      :class border-color}
+     [:div.flex.items-center.gap-2.mb-3
+      (when icon [:span {:class label-color} icon])
+      [:span.text-xs.font-bold.uppercase.tracking-widest {:class label-color} label]]
+     (if bullet-list?
+       [:ul.space-y-1
+        (for [item (clojure.string/split-lines (or value ""))]
+          (when (not (clojure.string/blank? item))
+            ^{:key item}
+            [:li.flex.items-start.gap-2.text-sm.text-gray-300
+             [:span {:class label-color} "•"] item]))]
+       [:p.text-sm.text-gray-300.leading-relaxed (or value "—")])]))
 
 (defn- build-order-detail []
   (fn []
@@ -685,171 +746,211 @@
          {:style {:background "#030712"}}
          [:h1.text-2xl.font-bold.text-white "Build Order Not Found"]]
 
-        [:div.flex.flex-col.min-h-screen.text-white.px-6.py-8
+        [:div.flex.flex-col.min-h-screen.text-white
          {:style {:background "#030712"}}
 
-         ;; Header row
-         [:div.flex.items-center.justify-between.mb-4.border-b.border-gray-800.pb-6
-          {:style {:background "rgba(17,24,39,0.5)"}}
-          (if (= (:id bo) edit-bo-id)
-            [:input.w-full.max-w-md.px-3.py-2.border.border-gray-700.rounded-lg.text-white.focus:outline-none.focus:border-amber-500
-             {:style {:background "#1f2937"}
-              :value (:name bo)
-              :on-change #(rf/dispatch [:update-selected-bo-field :name (-> % .-target .-value)])}]
-            [:h1.text-2xl.font-bold.text-white (:name bo)])
-          (when logged-in?
-            [:div.flex.items-center.gap-3
-             [:button.px-4.py-2.border.border-gray-600.hover:border-amber-400.text-white.font-medium.rounded-lg.transition-all
-              {:on-click #(rf/dispatch [:navigate {:route :build-orders-list :id nil}])}
-              "← Back to List"]
-             (if (= (:id bo) edit-bo-id)
-               [:<>
-                [:button.px-4.py-2.bg-amber-500.hover:bg-amber-600.text-white.font-semibold.rounded-lg.transition-all
-                 {:on-click #(rf/dispatch [:update-build-order-api (:id bo)
-                                           {:name (:name bo)
-                                            :author (:author bo)
-                                            :play_style (:play_style bo)
-                                            :youtube_url (:youtube_url bo)
-                                            :strategic_goals (:strategic_goals bo)
-                                            :counters (:counters bo)
-                                            :weaknesses (:weaknesses bo)
-                                            :transition_plan (:transition_plan bo)}])}
-                 "Save"]
-                [:button.px-4.py-2.border.border-gray-600.hover:border-amber-400.text-white.font-medium.rounded-lg.transition-all
-                 {:on-click #(rf/dispatch [:set-edit-bo-id nil])}
-                 "Cancel"]]
-               [:button.px-4.py-2.border.border-gray-600.hover:border-amber-400.text-white.font-medium.rounded-lg.transition-all
-                {:on-click #(rf/dispatch [:set-edit-bo-id (:id bo)])}
-                "Edit"])])]
+         ;; ── Hero / Header card ────────────────────────────────────────────
+         [:div.px-6.py-8.mb-6
+          {:style {:background "rgba(17,24,39,0.8)"
+                   :border-bottom "1px solid rgba(75,85,99,0.4)"}}
 
-         ;; Author
-         (if (= (:id bo) edit-bo-id)
-           [:input.w-full.max-w-md.px-3.py-2.border.border-gray-700.rounded-lg.text-white.focus:outline-none.focus:border-amber-500.mb-6
-            {:style {:background "#1f2937"}
-             :value (:author bo)
-             :on-change #(rf/dispatch [:update-selected-bo-field :author (-> % .-target .-value)])}]
-           [:p.text-sm.text-gray-400.mb-6 "by " (:author bo)])
+          [:div.max-w-4xl.mx-auto   ;; <-- centered wrapper
 
-         ;; Metadata fields
-         (if (= (:id bo) edit-bo-id)
-           [:div.grid.grid-cols-1.md:grid-cols-2.lg:grid-cols-3.gap-4.mb-8
-            [:div.border.border-gray-700.rounded-lg.p-4 {:style {:background "rgba(31,41,55,0.3)"}}
-             [:span.block.text-xs.font-semibold.text-gray-500.uppercase.tracking-wider.mb-2 "Play Style"]
-             [:input.w-full.px-3.py-2.border.border-gray-600.rounded-lg.text-white.focus:outline-none.focus:border-amber-500
+           ;; Title row
+           [:div.flex.items-start.justify-between.mb-4
+            (if (= (:id bo) edit-bo-id)
+              [:input.w-full.max-w-xl.px-3.py-2.border.border-gray-700.rounded-lg.text-white.text-3xl.font-bold.focus:outline-none.focus:border-amber-500
+               {:style {:background "#1f2937"}
+                :value (:name bo)
+                :on-change #(rf/dispatch [:update-selected-bo-field :name (-> % .-target .-value)])}]
+              [:h1.text-3xl.font-bold.text-white.leading-tight (:name bo)])
+            (when logged-in?
+              [:div.flex.items-center.gap-3.ml-6.flex-shrink-0
+               [:button.px-4.py-2.border.border-gray-600.hover:border-amber-400.text-white.font-medium.rounded-lg.transition-all.text-sm
+                {:on-click #(rf/dispatch [:navigate {:route :build-orders-list :id nil}])}
+                "← Back"]
+               (if (= (:id bo) edit-bo-id)
+                 [:<>
+                  [:button.px-4.py-2.bg-amber-500.hover:bg-amber-600.text-white.font-semibold.rounded-lg.transition-all.text-sm
+                   {:on-click #(rf/dispatch [:update-build-order-api (:id bo)
+                                             {:name (:name bo)
+                                              :author (:author bo)
+                                              :play_style (:play_style bo)
+                                              :youtube_url (:youtube_url bo)
+                                              :strategic_goals (:strategic_goals bo)
+                                              :counters (:counters bo)
+                                              :weaknesses (:weaknesses bo)
+                                              :transition_plan (:transition_plan bo)}])}
+                   "Save"]
+                  [:button.px-4.py-2.border.border-gray-600.hover:border-amber-400.text-white.font-medium.rounded-lg.transition-all.text-sm
+                   {:on-click #(rf/dispatch [:set-edit-bo-id nil])}
+                   "Cancel"]]
+                 [:button.px-4.py-2.border.border-gray-600.hover:border-amber-400.text-white.font-medium.rounded-lg.transition-all.text-sm
+                  {:on-click #(rf/dispatch [:set-edit-bo-id (:id bo)])}
+                  "Edit"])])]
+
+           ;; Author
+           (if (= (:id bo) edit-bo-id)
+             [:input.w-full.max-w-md.px-3.py-2.border.border-gray-700.rounded-lg.text-white.focus:outline-none.focus:border-amber-500.mb-4
               {:style {:background "#1f2937"}
-               :value (:play_style bo) :placeholder "e.g. Protoss"
-               :on-change #(rf/dispatch [:update-selected-bo-field :play_style (-> % .-target .-value)])}]]
-            [:div.border.border-gray-700.rounded-lg.p-4 {:style {:background "rgba(31,41,55,0.3)"}}
-             [:span.block.text-xs.font-semibold.text-gray-500.uppercase.tracking-wider.mb-2 "Strategic Goals"]
-             [:textarea.w-full.px-3.py-2.border.border-gray-600.rounded-lg.text-white.focus:outline-none.focus:border-amber-500
-              {:style {:background "#1f2937" :min-height "80px"}
-               :value (:strategic_goals bo) :placeholder "Main goals of this build"
-               :on-change #(rf/dispatch [:update-selected-bo-field :strategic_goals (-> % .-target .-value)])}]]
-            [:div.border.border-gray-700.rounded-lg.p-4 {:style {:background "rgba(31,41,55,0.3)"}}
-             [:span.block.text-xs.font-semibold.text-gray-500.uppercase.tracking-wider.mb-2 "Counters"]
-             [:textarea.w-full.px-3.py-2.border.border-gray-600.rounded-lg.text-white.focus:outline-none.focus:border-amber-500
-              {:style {:background "#1f2937" :min-height "80px"}
-               :value (:counters bo) :placeholder "What this build counters"
-               :on-change #(rf/dispatch [:update-selected-bo-field :counters (-> % .-target .-value)])}]]
-            [:div.border.border-gray-700.rounded-lg.p-4 {:style {:background "rgba(31,41,55,0.3)"}}
-             [:span.block.text-xs.font-semibold.text-gray-500.uppercase.tracking-wider.mb-2 "Weaknesses"]
-             [:textarea.w-full.px-3.py-2.border.border-gray-600.rounded-lg.text-white.focus:outline-none.focus:border-amber-500
-              {:style {:background "#1f2937" :min-height "80px"}
-               :value (:weaknesses bo) :placeholder "Build weaknesses"
-               :on-change #(rf/dispatch [:update-selected-bo-field :weaknesses (-> % .-target .-value)])}]]
-            [:div.border.border-gray-700.rounded-lg.p-4 {:style {:background "rgba(31,41,55,0.3)"}}
-             [:span.block.text-xs.font-semibold.text-gray-500.uppercase.tracking-wider.mb-2 "Transition Plan"]
-             [:textarea.w-full.px-3.py-2.border.border-gray-600.rounded-lg.text-white.focus:outline-none.focus:border-amber-500
-              {:style {:background "#1f2937" :min-height "80px"}
-               :value (:transition_plan bo) :placeholder "What to do if build doesn't win"
-               :on-change #(rf/dispatch [:update-selected-bo-field :transition_plan (-> % .-target .-value)])}]]]
-           [:div.grid.grid-cols-1.md:grid-cols-2.lg:grid-cols-3.gap-4.mb-8
-            [info-card {:label "Strategic Goals" :value (:strategic_goals bo)}]
-            [info-card {:label "Counters" :value (:counters bo)}]
-            [info-card {:label "Weaknesses" :value (:weaknesses bo)}]
-            [info-card {:label "Transition Plan" :value (:transition_plan bo)}]])
+               :value (:author bo)
+               :on-change #(rf/dispatch [:update-selected-bo-field :author (-> % .-target .-value)])}]
+             [:p.text-sm.mb-5
+              [:span.text-gray-400 "By "]
+              [:span.text-amber-400.font-semibold (:author bo)]])
 
-         ;; YouTube URL (edit) or embedded video (view)
-         (if (= (:id bo) edit-bo-id)
-           [:div.border.border-gray-700.rounded-lg.p-4.mb-8 {:style {:background "rgba(31,41,55,0.3)"}}
-            [:span.block.text-xs.font-semibold.text-gray-500.uppercase.tracking-wider.mb-2 "YouTube URL"]
-            [:input.w-full.px-3.py-2.border.border-gray-600.rounded-lg.text-white.focus:outline-none.focus:border-amber-500
-             {:style {:background "#1f2937"}
-              :value (:youtube_url bo) :placeholder "https://www.youtube.com/watch?v=..."
-              :on-change #(rf/dispatch [:update-selected-bo-field :youtube_url (-> % .-target .-value)])}]]
-           (when (:youtube_url bo)
-             (let [video-id (when-let [url (:youtube_url bo)]
-                              (when-let [[_ id] (re-matches #".*(?:v=|youtu\.be/)([a-zA-Z0-9_-]{11}).*" url)]
-                                id))]
-               (when video-id
-                 [:div.mb-8
-                  [:h2.text-xl.font-bold.text-white.mb-4 "Video"]
-                  [:div.relative.w-full.max-w-3xl.rounded-xl.overflow-hidden.shadow-lg
-                   {:style {:aspect-ratio "16/9" :background "#111827"}}
-                   [:iframe.w-full.h-full
-                    {:src (str "https://www.youtube.com/embed/" video-id)
-                     :frameBorder "0"
-                     :allow "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                     :allowFullScreen true}]]]))))
+           ;; Video / action buttons
+           [:div.flex.flex-wrap.gap-3
+            (when (:youtube_url bo)
+              [:a.flex.items-center.gap-2.px-4.py-2.border.border-gray-600.hover:border-amber-400.text-white.text-sm.font-medium.rounded-lg.transition-all
+               {:href (:youtube_url bo) :target "_blank"}
+               "↗ Watch Video Guide"])
+            (when (= (:id bo) edit-bo-id)
+              [:div.border.border-gray-700.rounded-lg.p-3 {:style {:background "rgba(31,41,55,0.3)"}}
+               [:span.block.text-xs.font-semibold.text-gray-500.uppercase.tracking-wider.mb-1 "YouTube URL"]
+               [:input.w-full.max-w-sm.px-3.py-2.border.border-gray-600.rounded-lg.text-white.text-sm.focus:outline-none.focus:border-amber-500
+                {:style {:background "#1f2937"}
+                 :value (:youtube_url bo) :placeholder "https://www.youtube.com/watch?v=..."
+                 :on-change #(rf/dispatch [:update-selected-bo-field :youtube_url (-> % .-target .-value)])}]])]]]
 
-         ;; Build steps
-         [:div.mb-8
-          [:h2.text-xl.font-bold.text-white.mb-4 "Build Steps"]
-          (when logged-in?
-            [:button.px-3.py-1.5.border.border-gray-600.hover:border-amber-400.text-white.font-medium.rounded-lg.transition-all.mb-4
-             {:on-click #(rf/dispatch [:add-step-api (:id bo)
-                                       {:supply 0 :time-seconds 0 :action-name "" :notes "" :sort-order (count (:steps bo))}])}
-             "+ Add Step"])
-          ;; Table header
-          [:div.grid.gap-4.items-center.p-3.border-b.border-gray-700.font-semibold.text-gray-400.text-sm.uppercase.tracking-wider
-           {:style {:grid-template-columns "80px 1fr 2fr 1.5fr auto"}}
-           [:div "Supply"] [:div "Time"] [:div "Action"] [:div "Notes"]
-           (when logged-in? [:div])]
-          ;; Step rows
-          (doall
-            (for [step (:steps bo)
-                  :let [edit-mode? (and logged-in? (= (:edit-step-id bo) (:id step)))]]
-              (doall
-                (println step)
+         ;; ── Info cards ───────────────────────────────────────────────────
+         [:div.px-6.mb-8
+          [:div.max-w-4xl.mx-auto   ;; <-- centered wrapper
+
+           (if (= (:id bo) edit-bo-id)
+             [:div.grid.grid-cols-1.md:grid-cols-2.lg:grid-cols-3.gap-4
+              [:div.border.border-gray-700.rounded-xl.p-4 {:style {:background "rgba(31,41,55,0.3)"}}
+               [:span.block.text-xs.font-bold.uppercase.tracking-widest.text-amber-400.mb-2 "Play Style"]
+               [:textarea.w-full.px-3.py-2.border.border-gray-600.rounded-lg.text-white.focus:outline-none.focus:border-amber-500.text-sm
+                {:style {:background "#1f2937" :min-height "120px" :resize "vertical"}
+                 :value (:play_style bo) :placeholder "e.g. PvZ aggressive opener"
+                 :on-change #(rf/dispatch [:update-selected-bo-field :play_style (-> % .-target .-value)])}]]
+              [:div.border.border-gray-700.rounded-xl.p-4 {:style {:background "rgba(31,41,55,0.3)"}}
+               [:span.block.text-xs.font-bold.uppercase.tracking-widest.text-amber-400.mb-2 "Strategic Goals"]
+               [:textarea.w-full.px-3.py-2.border.border-gray-600.rounded-lg.text-white.focus:outline-none.focus:border-amber-500.text-sm
+                {:style {:background "#1f2937" :min-height "120px" :resize "vertical"}
+                 :value (:strategic_goals bo) :placeholder "Main goals of this build"
+                 :on-change #(rf/dispatch [:update-selected-bo-field :strategic_goals (-> % .-target .-value)])}]]
+              [:div.border.border-gray-700.rounded-xl.p-4 {:style {:background "rgba(31,41,55,0.3)"}}
+               [:span.block.text-xs.font-bold.uppercase.tracking-widest.text-teal-400.mb-2 "Counters"]
+               [:textarea.w-full.px-3.py-2.border.border-gray-600.rounded-lg.text-white.focus:outline-none.focus:border-amber-500.text-sm
+                {:style {:background "#1f2937" :min-height "120px" :resize "vertical"}
+                 :value (:counters bo) :placeholder "What this build counters"
+                 :on-change #(rf/dispatch [:update-selected-bo-field :counters (-> % .-target .-value)])}]]
+              [:div.border.border-gray-700.rounded-xl.p-4 {:style {:background "rgba(31,41,55,0.3)"}}
+               [:span.block.text-xs.font-bold.uppercase.tracking-widest.text-red-400.mb-2 "Weaknesses"]
+               [:textarea.w-full.px-3.py-2.border.border-gray-600.rounded-lg.text-white.focus:outline-none.focus:border-amber-500.text-sm
+                {:style {:background "#1f2937" :min-height "120px" :resize "vertical"}
+                 :value (:weaknesses bo) :placeholder "Build weaknesses"
+                 :on-change #(rf/dispatch [:update-selected-bo-field :weaknesses (-> % .-target .-value)])}]]
+              [:div.border.border-gray-700.rounded-xl.p-4 {:style {:background "rgba(31,41,55,0.3)"}}
+               [:span.block.text-xs.font-bold.uppercase.tracking-widest.text-amber-400.mb-2 "Transition Plan"]
+               [:textarea.w-full.px-3.py-2.border.border-gray-600.rounded-lg.text-white.focus:outline-none.focus:border-amber-500.text-sm
+                {:style {:background "#1f2937" :min-height "120px" :resize "vertical"}
+                 :value (:transition_plan bo) :placeholder "What to do if build doesn't win"
+                 :on-change #(rf/dispatch [:update-selected-bo-field :transition_plan (-> % .-target .-value)])}]]]
+
+             [:<>
+              [:div.grid.grid-cols-1.md:grid-cols-2.gap-4.mb-4
+               [info-card-styled {:label "Play Style" :value (:play_style bo) :color :amber :icon "◈"}]
+               [info-card-styled {:label "Strategic Goals" :value (:strategic_goals bo) :color :amber :icon "◎" :bullet-list? true}]]
+              [:div.grid.grid-cols-1.md:grid-cols-2.gap-4.mb-4
+               [info-card-styled {:label "Counters" :value (:counters bo) :color :teal :icon "✕" :bullet-list? true}]
+               [info-card-styled {:label "Weaknesses" :value (:weaknesses bo) :color :red :icon "⚠" :bullet-list? true}]]
+              [:div.rounded-xl.p-5.border-l-4
+               {:style {:background "rgba(17,24,39,0.6)"
+                        :border-color "#f59e0b"
+                        :border-top "1px solid rgba(75,85,99,0.3)"
+                        :border-right "1px solid rgba(75,85,99,0.3)"
+                        :border-bottom "1px solid rgba(75,85,99,0.3)"}}
+               [:div.flex.items-center.gap-2.mb-3
+                [:span.text-amber-400 "↻"]
+                [:span.text-xs.font-bold.uppercase.tracking-widest.text-amber-400 "Transition Plan"]]
+               [:p.text-sm.text-gray-300.leading-relaxed (or (:transition_plan bo) "—")]]])]]
+
+         ;; ── Embedded video ───────────────────────────────────────────────
+         (when (and (not= (:id bo) edit-bo-id) (:youtube_url bo))
+           (let [video-id (when-let [url (:youtube_url bo)]
+                            (when-let [[_ id] (re-matches #".*(?:v=|youtu\.be/)([a-zA-Z0-9_-]{11}).*" url)]
+                              id))]
+             (when video-id
+               [:div.px-6.mb-8
+                [:div.max-w-4xl.mx-auto   ;; <-- centered wrapper
+                 [:h2.text-lg.font-bold.text-white.mb-3 "Video Guide"]
+                 [:div.relative.w-full.rounded-xl.overflow-hidden.shadow-lg
+                  {:style {:aspect-ratio "16/9" :background "#111827"}}
+                  [:iframe.w-full.h-full
+                   {:src (str "https://www.youtube.com/embed/" video-id)
+                    :frameBorder "0"
+                    :allow "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    :allowFullScreen true}]]]])))
+
+         ;; ── Build Steps ──────────────────────────────────────────────────
+         [:div.px-6.pb-12
+          [:div.max-w-4xl.mx-auto   ;; <-- centered wrapper
+
+           [:h2.text-xl.font-bold.text-amber-400.mb-4 "Build Order Steps"]
+
+           (when logged-in?
+             [:button.px-3.py-1.5.border.border-gray-600.hover:border-amber-400.text-white.font-medium.rounded-lg.transition-all.mb-4.text-sm
+              {:on-click #(rf/dispatch [:add-step-api (:id bo)
+                                        {:supply 0 :time-seconds 0 :action-name "" :notes "" :sort-order (count (:steps bo))}])}
+              "+ Add Step"])
+
+           [:div.rounded-xl.overflow-hidden
+            {:style {:border "1px solid rgba(75,85,99,0.3)"
+                     :background "rgba(17,24,39,0.5)"}}
+
+            [:div.grid.gap-4.items-center.px-4.py-3.font-semibold.text-gray-400.text-xs.uppercase.tracking-wider
+             {:style {:grid-template-columns "80px 80px 1fr 1fr auto"
+                      :border-bottom "1px solid rgba(75,85,99,0.4)"
+                      :background "rgba(31,41,55,0.5)"}}
+             [:div "Supply"] [:div "Time"] [:div "Action"] [:div "Notes"]
+             (when logged-in? [:div])]
+
+            (doall
+              (for [step (:steps bo)
+                    :let [edit-mode? (and logged-in? (= (:edit-step-id bo) (:id step)))]]
                 ^{:key (:id step)}
-                [:div.grid.gap-4.items-center.p-3.border-b.border-gray-700.transition-colors
-                 {:style {:grid-template-columns "80px 1fr 2fr 1.5fr auto"
-                          :background (if edit-mode? "rgba(120,53,15,0.1)" "rgba(31,41,55,0.2)")}
-                  :class (when edit-mode? "border-amber-500/30")}
-                 ;; Supply
-                 [:div.flex.items-center.gap-2
+                [:div.grid.gap-4.items-center.px-4.py-3.transition-colors
+                 {:style {:grid-template-columns "80px 80px 1fr 1fr auto"
+                          :border-bottom "1px solid rgba(75,85,99,0.25)"
+                          :background (if edit-mode? "rgba(120,53,15,0.12)" "transparent")}
+                  :class "hover:bg-white/5"}
+
+                 [:div
                   (if edit-mode?
-                    [:input.w-full.px-2.py-1.border.border-gray-600.rounded.text-white.focus:outline-none.focus:border-amber-500
+                    [:input.w-full.px-2.py-1.border.border-gray-600.rounded.text-white.focus:outline-none.focus:border-amber-500.text-sm
                      {:style {:background "#1f2937"}
                       :type "number" :value (:supply step)
                       :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :supply (parse-long (-> % .-target .-value)))])}]
-                    [:span.text-white.font-mono (:supply step)])]
-                 ;; Time
-                 [:div.flex.items-center.gap-2
+                    [:span.font-bold.text-amber-400.text-lg (:supply step)])]
+
+                 [:div
                   (if edit-mode?
-                    [:input.w-full.px-2.py-1.border.border-gray-600.rounded.text-white.focus:outline-none.focus:border-amber-500
+                    [:input.w-full.px-2.py-1.border.border-gray-600.rounded.text-white.focus:outline-none.focus:border-amber-500.text-sm
                      {:style {:background "#1f2937"}
                       :type "text" :value (format-time (:time_seconds step))
                       :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :time_seconds (parse-time-to-seconds (-> % .-target .-value)))])}]
-                    [:span.text-gray-300.font-mono (format-time (:time_seconds step))])]
-                 ;; Action
+                    [:span.text-gray-300.font-mono.text-sm (format-time (:time_seconds step))])]
+
                  [:div.flex.items-center.gap-2
                   (when-let [action-name (:action_name step)]
                     (action-icon action-name))
-                  (when edit-mode?
-                    [:input.w-full.px-2.py-1.border.border-gray-600.rounded.text-white.focus:outline-none.focus:border-amber-500
-                     {:style {:background "#1f2937"}
-                      :value (:action_name step)
-                      :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :action_name (-> % .-target .-value))])}])]
-                 ;; Notes
-                 [:div.flex.items-center.gap-2
                   (if edit-mode?
-                    [:input.w-full.px-2.py-1.border.border-gray-600.rounded.text-white.focus:outline-none.focus:border-amber-500
+                    [:input.w-full.px-2.py-1.border.border-gray-600.rounded.text-white.focus:outline-none.focus:border-amber-500.text-sm
                      {:style {:background "#1f2937"}
-                      :value (:notes step) :placeholder "e.g. chronoboost"
+                      :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :action_name (-> % .-target .-value))])}]
+                    #_[:span.text-white.text-sm (:action_name step)])]
+
+                 [:div
+                  (if edit-mode?
+                    [:input.w-full.px-2.py-1.border.border-gray-600.rounded.text-white.focus:outline-none.focus:border-amber-500.text-sm
+                     {:style {:background "#1f2937"}
+                      :value (:notes step) :placeholder "notes"
                       :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :notes (-> % .-target .-value))])}]
-                    [:span.text-gray-400 (:notes step)])]
-                 ;; Row actions
+                    [:span.text-gray-400.text-sm (or (:notes step) "—")])]
+
                  (when logged-in?
                    [:div.flex.items-center.gap-2.justify-end
                     (if edit-mode?
@@ -867,8 +968,7 @@
                         "Edit"]
                        [:button.px-2.py-1.bg-gray-700.hover:bg-red-600.text-white.text-xs.font-semibold.rounded.transition-all
                         {:on-click #(rf/dispatch [:set-delete-confirm {:type :step :id (:id step)}])}
-                        "Delete"]])])])
-              ))]]))))
+                        "Delete"]])])]))]]]]))))
 
 ;; ─── Replay Upload Modal ────────────────────────────────────────
 
