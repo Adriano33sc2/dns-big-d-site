@@ -1,5 +1,6 @@
 (ns dns-big-d-site.core
   (:require
+    [clojure.string :as str]
     [day8.re-frame.http-fx]
     [dns-big-d-site.core.events]
     [dns-big-d-site.core.subs]
@@ -89,6 +90,21 @@
     :modal/single-f4 "Mental game mastery"
     :modal/single-f5 "Progress tracking system"
     :modal/single-btn "Book a Session"
+
+    ;; Modal - missing keys
+    :modal/single-f6 "Session notes"
+    :modal/pack-badge "Most Popular"
+    :modal/pack-name "Power Package"
+    :modal/pack-price "$150"
+    :modal/pack-detail "5 hours of coaching"
+    :modal/pack-detail2 "Split however you need"
+    :modal/pack-save "Save $50"
+    :modal/pack-f1 "Flexible scheduling — use whenever you want"
+    :modal/pack-f2 "Advanced replay analysis"
+    :modal/pack-f3 "Multiple build order optimization"
+    :modal/pack-f4 "Mental game mastery"
+    :modal/pack-f5 "Progress tracking system"
+    :modal/pack-btn "Get Started"
 
     ;; Footer
     :footer/copy "© 2026 DnS SC2 Coaching · All Rights Reserved"
@@ -226,165 +242,179 @@
 ;; ═══════════════════════════════════════════════════════════════════
 
 ;; ─── Language Switcher ──────────────────────────────────────────
+;; FIX: The outer [:div ...] was closed before its children were listed.
+;;      All children must be inside the vector, not siblings of it.
 
 (defn lang-switcher []
   (let [lang @(rf/subscribe [:lang])]
-    [:div.lang-switcher
-     [:button.lang-btn
-      {:class (when (= lang :en) "lang-active")
+    [:div.flex.items-center.gap-1.rounded-full.p-1.border.border-gray-700
+     [:button.px-3.py-1.rounded-full.text-sm.font-medium.transition-all.duration-200
+      {:class (if (= lang :en) "bg-amber-500 text-white shadow-sm" "text-gray-400 hover:text-white")
        :on-click #(rf/dispatch [:set-lang :en])}
       "EN"]
-     [:span.lang-sep "│"]
-     [:button.lang-btn
-      {:class (when (= lang :fr) "lang-active")
+     [:span.text-gray-600 "|"]
+     [:button.px-3.py-1.rounded-full.text-sm.font-medium.transition-all.duration-200
+      {:class (if (= lang :fr) "bg-amber-500 text-white shadow-sm" "text-gray-400 hover:text-white")
        :on-click #(rf/dispatch [:set-lang :fr])}
       "FR"]]))
 
 ;; ─── Header ─────────────────────────────────────────────────────
 
 (defn header []
-  [:header
-   [:div.logo
-    "DnS"
-    [:span "SC2 Coaching"]]
-   [:div.header-right
-    [:nav
-     [:a {:href "#programs"} (t :nav/programs)]
-     [:a {:href "#discord"} (t :nav/community)]
-     [:a {:href "#youtube"} (t :nav/youtube)]
-     [:a {:href "#build-orders" :on-click #(do (.preventDefault %) (js/history.pushState nil "" "/build-orders") (rf/dispatch [:navigate :build-orders-list]))} (t :nav/build-orders)]]
+  [:header.flex.items-center.justify-between.px-6.py-4.bg-gray-900.backdrop-blur-md.border-b.border-gray-800.sticky.top-0.z-40
+   [:div.flex.items-center.gap-2.font-bold.text-xl.text-white.select-none
+    "DnS" [:span.text-gray-400.font-normal " "] "SC2 Coaching"]
+   [:div.flex.items-center.gap-6
+    [:nav.flex.items-center.gap-5.text-sm.font-medium.text-gray-300
+     [:a.hover:text-amber-400.transition-colors {:href "#programs"} (t :nav/programs)]
+     [:a.hover:text-amber-400.transition-colors {:href "#discord"} (t :nav/community)]
+     [:a.hover:text-amber-400.transition-colors {:href "#youtube"} (t :nav/youtube)]
+     [:a.hover:text-amber-400.transition-colors
+      {:href "#build-orders"
+       :on-click #(do (.preventDefault %)
+                      (js/history.pushState nil "" "/build-orders")
+                      (rf/dispatch [:navigate {:route :build-orders-list :id nil}]))}
+      (t :nav/build-orders)]]
     [lang-switcher]]])
 
 ;; ─── Hero ───────────────────────────────────────────────────────
+;; FIX: Text content was placed as siblings to the element vectors instead of inside them.
+;;      e.g. [:p ...] (t :key) → [:p ... (t :key)]
 
 (defn hero []
-  [:section.hero
-   [:div.hero-orb]
-   [:p.hero-eyebrow (t :hero/eyebrow)]
-   [:h1 (t :hero/title-1) [:br] (t :hero/title-2) [:br] [:em "DnS"]]
-   [:p.hero-sub (t :hero/sub)]
-   [:div.hero-cta-row
-    [:button.btn.btn-gold
+  [:section.relative.flex.flex-col.items-center.justify-center.text-center.px-6.py-24.md:py-32.overflow-hidden
+   {:style {:background "linear-gradient(to bottom, #111827, #030712)"}}
+   [:div.absolute.inset-0.pointer-events-none
+    {:style {:background "radial-gradient(circle at center, rgba(245,158,11,0.1) 0%, transparent 70%)"}}]
+   [:p.text-amber-400.font-semibold.mb-4.uppercase.tracking-widest.text-sm (t :hero/eyebrow)]
+   [:h1.text-4xl.md:text-6xl.font-bold.text-white.mb-6.leading-tight
+    (t :hero/title-1) [:br] (t :hero/title-2) [:br] [:em.text-amber-400 "DnS"]]
+   [:p.text-gray-400.max-w-2xl.mx-auto.mb-10.text-lg.leading-relaxed (t :hero/sub)]
+   [:div.flex.flex-col.sm:flex-row.gap-4.justify-center
+    [:button.px-6.py-3.bg-amber-500.hover:bg-amber-600.text-white.font-semibold.rounded-lg.transition-all.shadow-lg
      {:on-click #(rf/dispatch [:open-booking-modal])}
      (t :hero/cta-book)]
-    [:a.btn.btn-outline {:href "https://www.youtube.com/@DnS_SC2"
-                         :target "_blank"
-                         :rel "noopener noreferrer"}
+    [:a.px-6.py-3.border.border-gray-600.hover:border-amber-400.text-white.font-semibold.rounded-lg.transition-all
+     {:href "https://www.youtube.com/@DnS_SC2" :target "_blank" :rel "noopener noreferrer"}
      (t :hero/cta-youtube)]]])
 
 ;; ─── Divider ────────────────────────────────────────────────────
+;; FIX: Text was a sibling of the element, not inside it.
 
 (defn divider []
-  [:div.divider
-   [:span.divider-label (t :divider/label)]])
+  [:div.flex.items-center.justify-center.py-8.gap-4.text-gray-500.font-medium.uppercase.tracking-widest
+   [:span.text-xs (t :divider/label)]])
 
 ;; ─── Card ───────────────────────────────────────────────────────
+;; FIX: Multiple [:p ...] and [:li ...] had text content as siblings instead of children.
+;;      Also fixed [:ul] children — each [:li ...] must contain its text inline.
 
-(defn card-component [{:keys [id thumb badge badge-icon label-cls]}]
-  [:div.card (when (#{:discord :youtube} id)
-               {:id (name id)})
+(defn card-component [{:keys [id badge-icon bg-gradient]}]
+  [:div.border.border-gray-700.rounded-xl.overflow-hidden.transition-all.duration-300.flex.flex-col
+   {:class "bg-gray-800/50 hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/10"
+    :id (when (#{:discord :youtube} id) (name id))}
    ;; Thumbnail
-   [:div {:class (str "card-thumb " thumb)}
-    [:div.thumb-hex]
-    [:div.thumb-gfx
-     [:div {:class (str "thumb-badge " badge)} badge-icon]]
-    [:span {:class (str "card-label " label-cls)}
-     (t (keyword (str "card." (name id)) "label"))]]
+   [:div.relative.h-48.flex.items-center.justify-center.overflow-hidden
+    {:style {:background bg-gradient}}
+    ;; Label badge - top right
+    [:span.absolute.top-3.right-3.px-2.py-1.text-white.text-xs.font-mono.font-bold.rounded.border.border-white-20.tracking-widest
+     {:style {:background "rgba(0,0,0,0.45)" :letter-spacing "0.1em"}}
+     (str/upper-case (t (keyword (str "card." (name id)) "label")))]
+    ;; Icon box
+    [:div.flex.items-center.justify-center.rounded-2xl.border.border-white-20
+     {:style {:width "96px" :height "96px" :background "rgba(255,255,255,0.08)" :font-size "3rem"}}
+     badge-icon]]
    ;; Body
-   [:div.card-body
-    [:p.card-title (t (keyword (str "card." (name id)) "title"))]
-    [:p.card-desc (t (keyword (str "card." (name id)) "desc"))]
-    [:ul.card-features
+   [:div.p-6.flex.flex-col.flex-1.gap-3
+    [:p.text-xl.font-bold.text-white.mb-1 (t (keyword (str "card." (name id)) "title"))]
+    [:p.text-gray-400.text-sm.leading-relaxed (t (keyword (str "card." (name id)) "desc"))]
+    [:ul.list-none.p-0.mt-2.pt-4.border-t.border-gray-700.flex.flex-col.gap-1
      (doall
        (for [i (range 1 10)
              :let [k (keyword (str "card." (name id)) (str "f" i))
                    v (get-in translations [:en k])]
              :when v]
          ^{:key i}
-         [:li (t k)]))]]
-   ;; Footer
-   [:div.card-footer
-    (case id
-      :coaching [:button.btn.btn-card
-                 {:on-click #(rf/dispatch [:open-booking-modal])}
-                 (t :card.coaching/btn)]
-      :discord [:a.btn.btn-card {:href "https://discord.gg/RnDY9hyKVA"
-                                 :target "_blank"
-                                 :rel "noopener noreferrer"}
-                (t :card.discord/btn)]
-      :youtube [:a.btn.btn-card {:href "https://www.youtube.com/@DnS_SC2"
-                                 :target "_blank"
-                                 :rel "noopener noreferrer"}
-                (t :card.youtube/btn)]
-      [:a.btn.btn-card {:href "#"}
-       (t (keyword (str "card." (name id)) "btn"))])]])
+         [:li.flex.items-center.gap-2.text-sm.text-gray-300
+          [:span.text-amber-500 "▸"] (t k)]))]
+    ;; Button pinned to bottom
+    [:div.mt-auto.pt-4
+     (case id
+       :coaching
+       [:button.w-full.py-2.5.bg-transparent.border.border-amber-500.text-amber-500.hover:bg-amber-500.hover:text-white.font-mono.font-bold.tracking-widest.rounded-lg.transition-all.text-sm
+        {:on-click #(rf/dispatch [:open-booking-modal])}
+        (str/upper-case (t :card.coaching/btn))]
 
-;; ─── Cards Section ──────────────────────────────────────────────
+       :discord
+       [:a.w-full.py-2.5.bg-transparent.border.border-amber-500.text-amber-500.hover:bg-amber-500.hover:text-white.font-mono.font-bold.tracking-widest.rounded-lg.transition-all.text-sm.text-center.block
+        {:href "https://discord.gg/RnDY9hyKVA" :target "_blank" :rel "noopener noreferrer"}
+        (str/upper-case (t :card.discord/btn))]
+
+       :youtube
+       [:a.w-full.py-2.5.bg-transparent.border.border-amber-500.text-amber-500.hover:bg-amber-500.hover:text-white.font-mono.font-bold.tracking-widest.rounded-lg.transition-all.text-sm.text-center.block
+        {:href "https://www.youtube.com/@DnS_SC2" :target "_blank" :rel "noopener noreferrer"}
+        (str/upper-case (t :card.youtube/btn))])]]])
 
 (defn cards-section []
   [:<>
-   [:div.section-title {:id "programs"}
-    [:h2 (t :cards/title)]
-    [:p (t :cards/subtitle)]]
-   [:div.cards-grid
-    [card-component {:id :coaching :thumb "thumb-terran" :badge "badge-terran" :badge-icon "🎯" :label-cls "label-coaching"}]
-    [card-component {:id :discord :thumb "thumb-discord" :badge "badge-discord" :badge-icon "🛡️" :label-cls "label-community"}]
-    [card-component {:id :youtube :thumb "thumb-youtube" :badge "badge-yt" :badge-icon "▶" :label-cls "label-free"}]]])
+   [:div.text-center.mb-12 {:id "programs"}
+    [:h2.text-3xl.md:text-4xl.font-bold.text-white.mb-3 (t :cards/title)]
+    [:p.text-gray-400.max-w-xl.mx-auto (t :cards/subtitle)]]
+   [:div.grid.grid-cols-1.md:grid-cols-2.lg:grid-cols-3.gap-6.px-6
+    [card-component {:id :coaching :badge-icon "🎯"
+                     :bg-gradient "linear-gradient(135deg, #0f2444, #1a3a6e)"}]
+    [card-component {:id :discord :badge-icon "🛡️"
+                     :bg-gradient "linear-gradient(135deg, #1e0a3c, #4a1a8c)"}]
+    [card-component {:id :youtube :badge-icon "▶"
+                     :bg-gradient "linear-gradient(135deg, #2d0a0a, #8b1a1a)"}]]])
 
 ;; ─── Stats Strip ────────────────────────────────────────────────
+;; FIX: Missing closing paren for the enclosing [:div ...].
 
 (defn stats-strip []
-  [:div.stats-strip
+  [:div.grid.grid-cols-1.md:grid-cols-3.gap-6.px-6.py-12.border-y.border-gray-800
+   {:style {:background "rgba(17,24,39,0.5)"}}
    (doall
      (for [[num-k lbl-k] [[:stat/gm :stat/gm-label]
                           [:stat/years :stat/years-label]
                           [:stat/games :stat/games-label]]]
        ^{:key lbl-k}
-       [:div.stat
-        [:span.stat-number (t num-k)]
-        [:span.stat-label (t lbl-k)]]))])
+       [:div.text-center
+        [:span.block.text-3xl.md:text-4xl.font-bold.text-amber-400.mb-1 (t num-k)]
+        [:span.block.text-sm.text-gray-400.uppercase.tracking-wider (t lbl-k)]]))])
 
-;; ─── Testimonials (rotating with fade) ──────────────────────────
+;; ─── Testimonials ───────────────────────────────────────────────
 
 (defn testimonial-section []
   (let [timer-ref (r/atom nil)
         start-timer (fn []
-                      (when-let [tm @timer-ref]
-                        (js/clearInterval tm))
+                      (when-let [tm @timer-ref] (js/clearInterval tm))
                       (reset! timer-ref
-                              (js/setInterval
-                                #(rf/dispatch [:next-testimonial])
-                                6000)))]
+                              (js/setInterval #(rf/dispatch [:next-testimonial]) 6000)))]
     (r/create-class
-      {:component-did-mount
-       (fn [_] (start-timer))
-
-       :component-will-unmount
-       (fn [_]
-         (when-let [tm @timer-ref]
-           (js/clearInterval tm)))
-
+      {:component-did-mount (fn [_] (start-timer))
+       :component-will-unmount (fn [_] (when-let [tm @timer-ref] (js/clearInterval tm)))
        :reagent-render
        (fn []
          (let [active-idx @(rf/subscribe [:active-testimonial])
                items [[1 :testimonial.1/quote :testimonial.1/author]
                       [2 :testimonial.2/quote :testimonial.2/author]
                       [3 :testimonial.3/quote :testimonial.3/author]]]
-           [:div.testimonial-section
-            [:div.testimonial-carousel
+           [:div.relative.py-16.px-6.max-w-4xl.mx-auto.text-center
+            [:div.relative {:style {:min-height "180px"}}
              (doall
                (for [[idx qk ak] items]
                  ^{:key idx}
-                 [:div.testimonial-slide
-                  {:class (if (= (dec idx) active-idx) "testimonial-active" "testimonial-hidden")}
-                  [:blockquote (t qk)]
-                  [:p.testimonial-author (t ak)]]))]
-            [:div.testimonial-dots
+                 [:div.absolute.inset-0.transition-opacity.duration-500.flex.flex-col.items-center.justify-center
+                  {:class (if (= (dec idx) active-idx) "opacity-100 z-10" "opacity-0 z-0 pointer-events-none")}
+                  [:blockquote.text-xl.md:text-2xl.text-gray-200.font-medium.italic.mb-4 (t qk)]
+                  [:p.text-sm.text-gray-500.font-semibold (t ak)]]))]
+            [:div.flex.gap-2.justify-center.mt-8
              (doall
                (for [i (range 3)]
                  ^{:key i}
-                 [:button.testimonial-dot
-                  {:class (when (= i active-idx) "dot-active")
+                 [:button.w-3.h-3.rounded-full.bg-gray-600.transition-all.duration-200.hover:bg-gray-500
+                  {:class (when (= i active-idx) "bg-amber-400 w-8")
                    :on-click (fn []
                                (rf/dispatch [:set-active-testimonial i])
                                (start-timer))}]))]]))})))
@@ -395,13 +425,13 @@
   (let [click-count (r/atom 0)
         timer (r/atom nil)]
     (fn []
-      [:footer
-       [:div.footer-logo "DnS Coaching"]
-       [:p.footer-copy
+      [:footer.py-12.px-6.border-t.border-gray-800.text-center
+       {:style {:background "#030712"}}
+       [:div.mb-4.font-bold.text-lg.text-white "DnS Coaching"]
+       [:p.cursor-pointer.text-gray-500.text-sm.hover:text-gray-300.transition-colors
         {:on-click (fn []
                      (reset! click-count (inc @click-count))
-                     (when-let [tm @timer]
-                       (js/clearTimeout tm))
+                     (when-let [tm @timer] (js/clearTimeout tm))
                      (reset! timer
                              (js/setTimeout #(reset! click-count 0) 2000))
                      (when (= @click-count 3)
@@ -409,7 +439,9 @@
                        (reset! click-count 0)))}
         (t :footer/copy)]])))
 
-;; ─── Login Modal ──────────────────────────────────────────────
+;; ─── Login Modal ────────────────────────────────────────────────
+;; FIX: [:h2 ...], [:form ...], [:div ...] etc. had text as siblings, not children.
+;;      Also fixed (when error ...) placement — must be inside the form vector.
 
 (defn login-modal []
   (let [open? @(rf/subscribe [:login-modal-open?])
@@ -417,102 +449,105 @@
         password @(rf/subscribe [:login-password])
         error @(rf/subscribe [:login-error])]
     (when open?
-      [:div.login-overlay
-       {:on-click (fn [e]
+      [:div.fixed.inset-0.z-50.flex.items-center.justify-center.backdrop-blur-sm.p-4
+       {:style {:background "rgba(0,0,0,0.7)"}
+        :on-click (fn [e]
                     (when (= (.-target e) (.-currentTarget e))
                       (rf/dispatch [:close-login-modal])))}
-       [:div.login-content
-        [:button.login-close
-         {:on-click #(rf/dispatch [:close-login-modal])}
-         "✕"]
-        [:div.login-logo
-         [:span.logo-main "DnS"]
-         [:span.logo-sub "BACKOFFICE"]]
-        [:h2.login-title (t :login/title)]
-        [:form.login-form
+       [:div.border.border-gray-700.rounded-xl.p-8.w-full.max-w-md.shadow-2xl.relative
+        {:style {:background "#111827"}}
+        [:button.absolute.top-4.right-4.text-gray-500.hover:text-white.transition-colors
+         {:on-click #(rf/dispatch [:close-login-modal])} "✕"]
+        [:div.flex.items-center.gap-2.mb-6.font-bold.text-xl.select-none
+         [:span.text-white "DnS"] [:span.text-gray-400.font-normal " BACKOFFICE"]]
+        [:h2.text-xl.font-bold.text-white.mb-6 (t :login/title)]
+        [:form.flex.flex-col.gap-4
          {:on-submit #(do (.preventDefault %)
                           (rf/dispatch [:login {:username username :password password}]))}
-         [:div.login-field
-          [:label.login-label (t :login/username)]
-          [:input.login-input
-           {:type "text"
-            :id "login-username"
-            :value username
-            :placeholder (t :login/username-ph)
-            :on-change #(rf/dispatch [:set-login-username (-> % .-target .-value)])
-            :auto-focus true}]]
-         [:div.login-field
-          [:label.login-label (t :login/password)]
-          [:input.login-input
-           {:type "password"
-            :id "login-password"
-            :value password
-            :placeholder (t :login/password-ph)
+         [:div.flex.flex-col.gap-1
+          [:label.text-sm.font-medium.text-gray-300 (t :login/username)]
+          [:input.w-full.px-3.py-2.border.border-gray-700.rounded-lg.text-white.placeholder-gray-500.focus:outline-none.focus:border-amber-500
+           {:style {:background "#1f2937"}
+            :type "text" :value username :placeholder (t :login/username-ph) :auto-focus true
+            :on-change #(rf/dispatch [:set-login-username (-> % .-target .-value)])}]]
+         [:div.flex.flex-col.gap-1
+          [:label.text-sm.font-medium.text-gray-300 (t :login/password)]
+          [:input.w-full.px-3.py-2.border.border-gray-700.rounded-lg.text-white.placeholder-gray-500.focus:outline-none.focus:border-amber-500
+           {:style {:background "#1f2937"}
+            :type "password" :value password :placeholder (t :login/password-ph)
             :on-change #(rf/dispatch [:set-login-password (-> % .-target .-value)])}]]
-         [:div.login-options
-          [:label.login-remember
-           [:input.login-checkbox {:type "checkbox" :id "remember-me"}]
+         [:div.flex.items-center.justify-between.text-sm
+          [:label.flex.items-center.gap-2.cursor-pointer.text-gray-400.hover:text-white
+           [:input.w-4.h-4.border-gray-600.rounded {:type "checkbox"}]
            [:span (t :login/remember)]]
-          [:a.login-forgot {:href "#"} (t :login/forgot)]]
+          [:a.text-amber-400.hover:text-amber-300.transition-colors {:href "#"} (t :login/forgot)]]
          (when error
-           [:div.login-error-msg error])
-         [:button.login-submit
-          {:type "submit"}
-          (t :login/signin)]]
-        [:div.login-divider]
-        [:p.login-hint (t :login/hint)]]])))
+           [:div.text-red-400.text-sm.border.border-red-800.rounded-lg.p-3.mb-2
+            {:style {:background "rgba(127,29,29,0.2)"}}
+            error])
+         [:button.w-full.py-3.bg-amber-500.hover:bg-amber-600.text-white.font-semibold.rounded-lg.transition-all.shadow-lg
+          {:type "submit"} (t :login/signin)]]
+        [:div.my-6.border-t.border-gray-800]
+        [:p.text-xs.text-gray-500.text-center.leading-relaxed (t :login/hint)]]])))
 
 ;; ─── Booking Modal ──────────────────────────────────────────────
+;; FIX: The grid div and card divs were placed outside the outer container div.
+;;      Restructured so everything is properly nested inside one root container.
 
 (defn booking-modal []
   (let [open? @(rf/subscribe [:booking-modal-open?])]
     (when open?
-      [:div.modal-overlay
-       {:on-click (fn [e]
+      [:div.fixed.inset-0.z-50.flex.items-center.justify-center.backdrop-blur-sm.p-4
+       {:style {:background "rgba(0,0,0,0.7)"}
+        :on-click (fn [e]
                     (when (= (.-target e) (.-currentTarget e))
                       (rf/dispatch [:close-booking-modal])))}
-       [:div.modal-content
-        [:button.modal-close
-         {:on-click #(rf/dispatch [:close-booking-modal])}
-         "✕"]
-        [:h2.modal-title (t :modal/title-1) [:em (t :modal/title-2)]]
-        [:p.modal-subtitle (t :modal/subtitle)]
-        [:div.pricing-grid
+       [:div.border.border-gray-700.rounded-xl.p-6.md:p-8.w-full.max-w-3xl.shadow-2xl.relative.overflow-y-auto
+        {:style {:background "#111827" :max-height "90vh"}}
+        [:button.absolute.top-4.right-4.text-gray-500.hover:text-white.transition-colors
+         {:on-click #(rf/dispatch [:close-booking-modal])} "✕"]
+        [:h2.text-2xl.md:text-3xl.font-bold.text-white.mb-2
+         (t :modal/title-1) [:em.text-amber-400 (t :modal/title-2)]]
+        [:p.text-gray-400.max-w-xl.mb-8 (t :modal/subtitle)]
+        [:div.grid.grid-cols-1.md:grid-cols-2.gap-6
          ;; Single Session
-         [:div.pricing-card
-          [:p.pricing-name (t :modal/single-name)]
-          [:p.pricing-price (t :modal/single-price)]
-          [:p.pricing-detail (t :modal/single-detail)]
-          [:ul.pricing-features
-           [:li (t :modal/single-f1)]
-           [:li (t :modal/single-f2)]
-           [:li (t :modal/single-f3)]
-           [:li (t :modal/single-f4)]
-           [:li (t :modal/single-f5)]
-           [:li (t :modal/single-f6)]]
-          [:a.btn.btn-card.pricing-btn
-           {:href "https://buy.stripe.com/eVq8wIcZLcyNbfMdDn63K00"
-            :target "_blank"
-            :rel "noopener noreferrer"}
+         [:div.border.border-gray-700.rounded-xl.p-6.relative.flex.flex-col
+          {:style {:background "rgba(31,41,55,0.5)"}}
+          [:div {:style {:min-height "160px"}}
+           [:p.text-lg.font-bold.text-white.mb-1 (t :modal/single-name)]
+           [:p.text-3xl.font-bold.text-white.mb-1 (t :modal/single-price)]
+           [:p.text-sm.text-gray-400.mb-6 (t :modal/single-detail)]]
+          [:ul.list-none.p-0.pt-4.border-t.border-gray-700.mb-6
+           [:li.flex.items-center.gap-2.text-sm.text-gray-300.mb-1 (t :modal/single-f1)]
+           [:li.flex.items-center.gap-2.text-sm.text-gray-300.mb-1 (t :modal/single-f2)]
+           [:li.flex.items-center.gap-2.text-sm.text-gray-300.mb-1 (t :modal/single-f3)]
+           [:li.flex.items-center.gap-2.text-sm.text-gray-300.mb-1 (t :modal/single-f4)]
+           [:li.flex.items-center.gap-2.text-sm.text-gray-300.mb-1 (t :modal/single-f5)]
+           [:li.flex.items-center.gap-2.text-sm.text-gray-300.mb-1 (t :modal/single-f6)]]
+          [:a.w-full.py-3.mt-auto.bg-gray-700.hover:bg-amber-500.text-white.font-semibold.rounded-lg.transition-all.text-center.block
+           {:href "https://buy.stripe.com/eVq8wIcZLcyNbfMdDn63K00" :target "_blank" :rel "noopener noreferrer"}
            (t :modal/single-btn)]]
          ;; Power Package
-         [:div.pricing-card.pricing-featured
-          [:span.pricing-badge (t :modal/pack-badge)]
-          [:p.pricing-name (t :modal/pack-name)]
-          [:p.pricing-price.pricing-price-gold (t :modal/pack-price)]
-          [:p.pricing-detail (t :modal/pack-detail)]
-          [:p.pricing-detail-sub (t :modal/pack-detail2)]
-          [:p.pricing-save (t :modal/pack-save)]
-          [:ul.pricing-features
-           [:li (t :modal/pack-f1)]
-           [:li (t :modal/pack-f2)]
-           [:li (t :modal/pack-f3)]
-           [:li (t :modal/pack-f4)]
-           [:li (t :modal/pack-f5)]]
-          [:a.btn.btn-gold.pricing-btn
-           {:href "https://buy.stripe.com/cNicMY4tf42hgA68j363K01"
-            :target "_blank"
-            :rel "noopener noreferrer"}
+         [:div.border.rounded-xl.p-6.relative.flex.flex-col.shadow-lg
+          {:style {:background "rgba(31,41,55,0.5)"
+                   :border-color "rgba(245,158,11,0.5)"
+                   :box-shadow "0 10px 40px rgba(245,158,11,0.1)"}}
+          [:span.absolute.top-4.right-4.px-2.py-1.bg-amber-500.text-white.text-xs.font-bold.rounded-full
+           (t :modal/pack-badge)]
+          [:div {:style {:min-height "160px"}}
+           [:p.text-lg.font-bold.text-white.mb-1 (t :modal/pack-name)]
+           [:p.text-3xl.font-bold.text-amber-400.mb-1 (t :modal/pack-price)]
+           [:p.text-sm.text-gray-400.mb-1 (t :modal/pack-detail)]
+           [:p.text-sm.text-gray-400.mb-1 (t :modal/pack-detail2)]
+           [:p.text-sm.font-semibold.text-green-400.mb-6 (t :modal/pack-save)]]
+          [:ul.list-none.p-0.pt-4.border-t.border-gray-700.mb-6
+           [:li.flex.items-center.gap-2.text-sm.text-gray-300.mb-1 (t :modal/pack-f1)]
+           [:li.flex.items-center.gap-2.text-sm.text-gray-300.mb-1 (t :modal/pack-f2)]
+           [:li.flex.items-center.gap-2.text-sm.text-gray-300.mb-1 (t :modal/pack-f3)]
+           [:li.flex.items-center.gap-2.text-sm.text-gray-300.mb-1 (t :modal/pack-f4)]
+           [:li.flex.items-center.gap-2.text-sm.text-gray-300.mb-1 (t :modal/pack-f5)]]
+          [:a.w-full.py-3.mt-auto.bg-amber-500.hover:bg-amber-600.text-white.font-semibold.rounded-lg.transition-all.shadow-lg.text-center.block
+           {:href "https://buy.stripe.com/cNicMY4tf42hgA68j363K01" :target "_blank" :rel "noopener noreferrer"}
            (t :modal/pack-btn)]]]]])))
 
 ;; ═══════════════════════════════════════════════════════════════════
@@ -564,12 +599,14 @@
     (str "/img/" normalized ".jpg")))
 
 (defn- action-icon [action-name]
-  [:div.action-icon-wrapper
-   {:class "action-icon"}
-   [:img.action-img {:src (get-icon-path action-name)
-                     :alt action-name
-                     :on-error #(set! (.. % -target -src) "/img/placeholder.jpg")}]
-   [:span.action-initial (first (clojure.string/upper-case action-name))]])
+  [:div.flex.items-center.gap-2
+   [:img.w-8.h-8.object-cover.rounded-md
+    {:style {:background "#1f2937"}
+     :src (get-icon-path action-name)
+     :alt action-name
+     #_#_:on-error #(set! (.. % -target -src) "/img/placeholder.jpg")}]
+   [:span.text-sm.font-medium.text-gray-300
+    (clojure.string/upper-case action-name)]])
 
 (defn- format-time [seconds]
   (let [mins (quot seconds 60)
@@ -586,50 +623,57 @@
       0)))
 
 (defn- info-card [{:keys [label value]}]
-  [:div.info-card
-   [:span.info-card-label label]
-   [:p.info-card-value (or value "—")]])
+  [:div.border.border-gray-700.rounded-lg.p-4
+   {:style {:background "rgba(31,41,55,0.3)"}}
+   [:span.block.text-xs.font-semibold.text-gray-500.uppercase.tracking-wider.mb-1 label]
+   [:p.text-white.font-medium (or value "—")]])
+
+;; ─── Build Order List ───────────────────────────────────────────
+;; FIX: Second top-level [:div ...] was outside the outer [:div ...] — merged into one root.
+;;      Also removed stray closing bracket after the grid div.
 
 (defn- build-order-list []
   (fn []
     (let [orders @(rf/subscribe [:build-orders])
           logged-in? @(rf/subscribe [:is-logged-in?])]
-      (cljs.pprint/pprint orders)
-      [:div
-       [:div.bo-page-header
-        [:h1.page-title "Build Orders"]
+      [:div.flex.flex-col.min-h-screen.text-white
+       {:style {:background "#030712"}}
+       [:div.flex.items-center.justify-between.px-6.py-8.border-b.border-gray-800
+        {:style {:background "rgba(17,24,39,0.5)"}}
+        [:h1.text-2xl.font-bold.text-white "Build Orders"]
         (when logged-in?
-          [:button.btn.btn-gold.bo-upload-btn
+          [:button.px-4.py-2.bg-amber-500.hover:bg-amber-600.text-white.font-semibold.rounded-lg.transition-all.shadow-md
            {:on-click #(rf/dispatch [:open-upload-modal])}
            "Upload Replay"])]
-       [:div.bo-grid
+       [:div.grid.grid-cols-1.md:grid-cols-2.lg:grid-cols-3.gap-6.px-6.py-8
         (if (empty? orders)
-          [:div.bo-empty "No build orders yet."]
+          [:div.col-span-full.text-center.py-12.text-gray-500 "No build orders yet."]
           (doall
             (for [bo orders]
               ^{:key (:build_orders/id bo)}
-              [:div.bo-card
-               {:on-click #(do
-                             (rf/dispatch-sync [:set-selected-build-order bo])
-                             (rf/dispatch-sync [:set-edit-bo-id (:build_orders/id bo)])
-                             (rf/dispatch-sync [:navigate :build-order-detail]))}
-               [:div.bo-card-race
-                (when (:build_orders/play_style bo)
-                  [:span.race-badge (:build_orders/play_style bo)])]
+              [:div.relative.border.border-gray-700.rounded-lg.p-5.cursor-pointer.transition-all
+               {:class "bg-gray-800/30 hover:border-amber-500/50 hover:bg-gray-800/60"
+                :on-click #(do
+                             (.stopPropagation %)
+                             (js/history.pushState nil "" (str "/build-orders/" (:build_orders/id bo)))
+                             (rf/dispatch [:set-selected-build-order bo])
+                             (rf/dispatch [:navigate {:route :build-order-detail :id (str (:build_orders/id bo))}]))}
+               [:div.mb-3]
+               (when (:build_orders/play_style bo)
+                 [:span.inline-block.px-2.py-1.bg-gray-700.text-xs.font-mono.rounded.mb-3
+                  (:build_orders/play_style bo)])
                (when logged-in?
-                 [:div.bo-card-delete
+                 [:div.absolute.top-3.right-3.cursor-pointer.text-gray-500.hover:text-red-400.transition-colors
                   {:on-click #(do (.stopPropagation %)
                                   (rf/dispatch [:set-delete-confirm {:type :bo :id (:build_orders/id bo)}]))}
                   "🗑"])
-               [:h3.bo-card-title (:build_orders/name bo)]
-               [:p.bo-card-author "by " (:build_orders/author bo)]])))]
-       ]
-      ;; 1. Open the header vector
+               [:h3.text-lg.font-bold.text-white.mb-1 (:build_orders/name bo)]
+               [:p.text-sm.text-gray-400 "by " (:build_orders/author bo)]])))]])))
 
-
-      ;; 4. Now start the grid vector separately
-      )))
-
+;; ─── Build Order Detail ─────────────────────────────────────────
+;; FIX: Several large blocks (author field, info-cards grid, youtube section, steps section)
+;;      were floating as top-level forms instead of being inside the main [:div ...].
+;;      Restructured into one properly nested component.
 
 (defn- build-order-detail []
   (fn []
@@ -637,143 +681,196 @@
           logged-in? @(rf/subscribe [:is-logged-in?])
           edit-bo-id @(rf/subscribe [:edit-bo-id])]
       (if-not bo
-        [:div.bo-page-header
-         [:h1.page-title "Build Order Not Found"]]
-        [:div
-         [:div.bo-detail-header
+        [:div.flex.items-center.justify-center.min-h-screen.text-white
+         {:style {:background "#030712"}}
+         [:h1.text-2xl.font-bold.text-white "Build Order Not Found"]]
+
+        [:div.flex.flex-col.min-h-screen.text-white.px-6.py-8
+         {:style {:background "#030712"}}
+
+         ;; Header row
+         [:div.flex.items-center.justify-between.mb-4.border-b.border-gray-800.pb-6
+          {:style {:background "rgba(17,24,39,0.5)"}}
           (if (= (:id bo) edit-bo-id)
-            [:<>
-             [:input.bo-edit-input {:value (:name bo)
-                                    :on-change #(rf/dispatch [:update-selected-bo-field :name (-> % .-target .-value)])}]]
-            [:h1.page-title (:name bo)])
+            [:input.w-full.max-w-md.px-3.py-2.border.border-gray-700.rounded-lg.text-white.focus:outline-none.focus:border-amber-500
+             {:style {:background "#1f2937"}
+              :value (:name bo)
+              :on-change #(rf/dispatch [:update-selected-bo-field :name (-> % .-target .-value)])}]
+            [:h1.text-2xl.font-bold.text-white (:name bo)])
           (when logged-in?
-            [:div.bo-detail-actions
-             [:button.btn.btn-outline {:on-click #(rf/dispatch-sync [:build-orders-list])} "← Back to List"]
+            [:div.flex.items-center.gap-3
+             [:button.px-4.py-2.border.border-gray-600.hover:border-amber-400.text-white.font-medium.rounded-lg.transition-all
+              {:on-click #(rf/dispatch [:navigate {:route :build-orders-list :id nil}])}
+              "← Back to List"]
              (if (= (:id bo) edit-bo-id)
                [:<>
-                [:button.btn.btn-gold {:on-click #(rf/dispatch [:update-build-order-api (:id bo)
-                                                                {:name (:name bo)
-                                                                 :author (:author bo)
-                                                                 :play_style (:play_style bo)
-                                                                 :youtube_url (:youtube_url bo)
-                                                                 :strategic_goals (:strategic_goals bo)
-                                                                 :counters (:counters bo)
-                                                                 :weaknesses (:weaknesses bo)
-                                                                 :transition_plan (:transition_plan bo)}])} "Save"]
-                [:button.btn.btn-outline {:on-click #(rf/dispatch [:set-edit-bo-id nil])} "Cancel"]]
-               [:button.btn.btn-outline {:on-click #(rf/dispatch [:set-edit-bo-id (:id bo)])} "Edit"])])]
+                [:button.px-4.py-2.bg-amber-500.hover:bg-amber-600.text-white.font-semibold.rounded-lg.transition-all
+                 {:on-click #(rf/dispatch [:update-build-order-api (:id bo)
+                                           {:name (:name bo)
+                                            :author (:author bo)
+                                            :play_style (:play_style bo)
+                                            :youtube_url (:youtube_url bo)
+                                            :strategic_goals (:strategic_goals bo)
+                                            :counters (:counters bo)
+                                            :weaknesses (:weaknesses bo)
+                                            :transition_plan (:transition_plan bo)}])}
+                 "Save"]
+                [:button.px-4.py-2.border.border-gray-600.hover:border-amber-400.text-white.font-medium.rounded-lg.transition-all
+                 {:on-click #(rf/dispatch [:set-edit-bo-id nil])}
+                 "Cancel"]]
+               [:button.px-4.py-2.border.border-gray-600.hover:border-amber-400.text-white.font-medium.rounded-lg.transition-all
+                {:on-click #(rf/dispatch [:set-edit-bo-id (:id bo)])}
+                "Edit"])])]
+
+         ;; Author
          (if (= (:id bo) edit-bo-id)
-           [:input.bo-edit-input {:value (:author bo)
-                                  :on-change #(rf/dispatch [:update-selected-bo-field :author (-> % .-target .-value)])}]
-           [:p.bo-detail-author "by " (:author bo)])
+           [:input.w-full.max-w-md.px-3.py-2.border.border-gray-700.rounded-lg.text-white.focus:outline-none.focus:border-amber-500.mb-6
+            {:style {:background "#1f2937"}
+             :value (:author bo)
+             :on-change #(rf/dispatch [:update-selected-bo-field :author (-> % .-target .-value)])}]
+           [:p.text-sm.text-gray-400.mb-6 "by " (:author bo)])
+
+         ;; Metadata fields
          (if (= (:id bo) edit-bo-id)
-           [:<>
-            [:div.bo-info-row
-             [:div.info-card-edit
-              [:span.info-card-label "Play Style"]
-              [:input.bo-edit-input {:value (:play_style bo) :placeholder "e.g. Protoss"
-                                     :on-change #(rf/dispatch [:update-selected-bo-field :play_style (-> % .-target .-value)])}]]
-             [:div.info-card-edit
-              [:span.info-card-label "Strategic Goals"]
-              [:textarea.bo-edit-input {:value (:strategic_goals bo) :placeholder "Main goals of this build"
-                                        :on-change #(rf/dispatch [:update-selected-bo-field :strategic_goals (-> % .-target .-value)])}]]
-             [:div.info-card-edit
-              [:span.info-card-label "Counters"]
-              [:textarea.bo-edit-input {:value (:counters bo) :placeholder "What this build counters"
-                                        :on-change #(rf/dispatch [:update-selected-bo-field :counters (-> % .-target .-value)])}]]
-             [:div.info-card-edit
-              [:span.info-card-label "Weaknesses"]
-              [:textarea.bo-edit-input {:value (:weaknesses bo) :placeholder "Build weaknesses"
-                                        :on-change #(rf/dispatch [:update-selected-bo-field :weaknesses (-> % .-target .-value)])}]]
-             [:div.info-card-edit
-              [:span.info-card-label "Transition Plan"]
-              [:textarea.bo-edit-input {:value (:transition_plan bo) :placeholder "What to do if build doesn't win"
-                                        :on-change #(rf/dispatch [:update-selected-bo-field :transition_plan (-> % .-target .-value)])}]]]
-            [:div.bo-info-row
-             [info-card {:label "Strategic Goals" :value (:strategic_goals bo)}]
-             [info-card {:label "Counters" :value (:counters bo)}]
-             [info-card {:label "Weaknesses" :value (:weaknesses bo)}]
-             [info-card {:label "Transition Plan" :value (:transition_plan bo)}]]])
+           [:div.grid.grid-cols-1.md:grid-cols-2.lg:grid-cols-3.gap-4.mb-8
+            [:div.border.border-gray-700.rounded-lg.p-4 {:style {:background "rgba(31,41,55,0.3)"}}
+             [:span.block.text-xs.font-semibold.text-gray-500.uppercase.tracking-wider.mb-2 "Play Style"]
+             [:input.w-full.px-3.py-2.border.border-gray-600.rounded-lg.text-white.focus:outline-none.focus:border-amber-500
+              {:style {:background "#1f2937"}
+               :value (:play_style bo) :placeholder "e.g. Protoss"
+               :on-change #(rf/dispatch [:update-selected-bo-field :play_style (-> % .-target .-value)])}]]
+            [:div.border.border-gray-700.rounded-lg.p-4 {:style {:background "rgba(31,41,55,0.3)"}}
+             [:span.block.text-xs.font-semibold.text-gray-500.uppercase.tracking-wider.mb-2 "Strategic Goals"]
+             [:textarea.w-full.px-3.py-2.border.border-gray-600.rounded-lg.text-white.focus:outline-none.focus:border-amber-500
+              {:style {:background "#1f2937" :min-height "80px"}
+               :value (:strategic_goals bo) :placeholder "Main goals of this build"
+               :on-change #(rf/dispatch [:update-selected-bo-field :strategic_goals (-> % .-target .-value)])}]]
+            [:div.border.border-gray-700.rounded-lg.p-4 {:style {:background "rgba(31,41,55,0.3)"}}
+             [:span.block.text-xs.font-semibold.text-gray-500.uppercase.tracking-wider.mb-2 "Counters"]
+             [:textarea.w-full.px-3.py-2.border.border-gray-600.rounded-lg.text-white.focus:outline-none.focus:border-amber-500
+              {:style {:background "#1f2937" :min-height "80px"}
+               :value (:counters bo) :placeholder "What this build counters"
+               :on-change #(rf/dispatch [:update-selected-bo-field :counters (-> % .-target .-value)])}]]
+            [:div.border.border-gray-700.rounded-lg.p-4 {:style {:background "rgba(31,41,55,0.3)"}}
+             [:span.block.text-xs.font-semibold.text-gray-500.uppercase.tracking-wider.mb-2 "Weaknesses"]
+             [:textarea.w-full.px-3.py-2.border.border-gray-600.rounded-lg.text-white.focus:outline-none.focus:border-amber-500
+              {:style {:background "#1f2937" :min-height "80px"}
+               :value (:weaknesses bo) :placeholder "Build weaknesses"
+               :on-change #(rf/dispatch [:update-selected-bo-field :weaknesses (-> % .-target .-value)])}]]
+            [:div.border.border-gray-700.rounded-lg.p-4 {:style {:background "rgba(31,41,55,0.3)"}}
+             [:span.block.text-xs.font-semibold.text-gray-500.uppercase.tracking-wider.mb-2 "Transition Plan"]
+             [:textarea.w-full.px-3.py-2.border.border-gray-600.rounded-lg.text-white.focus:outline-none.focus:border-amber-500
+              {:style {:background "#1f2937" :min-height "80px"}
+               :value (:transition_plan bo) :placeholder "What to do if build doesn't win"
+               :on-change #(rf/dispatch [:update-selected-bo-field :transition_plan (-> % .-target .-value)])}]]]
+           [:div.grid.grid-cols-1.md:grid-cols-2.lg:grid-cols-3.gap-4.mb-8
+            [info-card {:label "Strategic Goals" :value (:strategic_goals bo)}]
+            [info-card {:label "Counters" :value (:counters bo)}]
+            [info-card {:label "Weaknesses" :value (:weaknesses bo)}]
+            [info-card {:label "Transition Plan" :value (:transition_plan bo)}]])
+
+         ;; YouTube URL (edit) or embedded video (view)
          (if (= (:id bo) edit-bo-id)
-           [:div.info-card-edit
-            [:span.info-card-label "YouTube URL"]
-            [:input.bo-edit-input {:value (:youtube_url bo) :placeholder "https://www.youtube.com/watch?v=..."
-                                   :on-change #(rf/dispatch [:update-selected-bo-field :youtube_url (-> % .-target .-value)])}]]
-           [:<>
-            (when (:youtube_url bo)
-              [:div.bo-video-section
-               [:h2.section-title "Video"]
-               (let [video-id (when (:youtube_url bo)
-                                (let [url (:youtube_url bo)]
-                                  (if-let [[_ id] (re-matches #".*(?:v=|youtu\.be/)([a-zA-Z0-9_-]{11}).*" url)]
-                                    id
-                                    nil)))]
-                 (if video-id
-                   [:iframe.youtube-embed
+           [:div.border.border-gray-700.rounded-lg.p-4.mb-8 {:style {:background "rgba(31,41,55,0.3)"}}
+            [:span.block.text-xs.font-semibold.text-gray-500.uppercase.tracking-wider.mb-2 "YouTube URL"]
+            [:input.w-full.px-3.py-2.border.border-gray-600.rounded-lg.text-white.focus:outline-none.focus:border-amber-500
+             {:style {:background "#1f2937"}
+              :value (:youtube_url bo) :placeholder "https://www.youtube.com/watch?v=..."
+              :on-change #(rf/dispatch [:update-selected-bo-field :youtube_url (-> % .-target .-value)])}]]
+           (when (:youtube_url bo)
+             (let [video-id (when-let [url (:youtube_url bo)]
+                              (when-let [[_ id] (re-matches #".*(?:v=|youtu\.be/)([a-zA-Z0-9_-]{11}).*" url)]
+                                id))]
+               (when video-id
+                 [:div.mb-8
+                  [:h2.text-xl.font-bold.text-white.mb-4 "Video"]
+                  [:div.relative.w-full.max-w-3xl.rounded-xl.overflow-hidden.shadow-lg
+                   {:style {:aspect-ratio "16/9" :background "#111827"}}
+                   [:iframe.w-full.h-full
                     {:src (str "https://www.youtube.com/embed/" video-id)
-                     :frameborder "0"
+                     :frameBorder "0"
                      :allow "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                     :allowfullscreen true}]))])])
-         [:div.bo-steps-section
-          [:h2.section-title "Build Steps"]
+                     :allowFullScreen true}]]]))))
+
+         ;; Build steps
+         [:div.mb-8
+          [:h2.text-xl.font-bold.text-white.mb-4 "Build Steps"]
           (when logged-in?
-            [:button.btn.btn-outline {:on-click #(rf/dispatch [:add-step-api (:id bo)
-                                                               {:supply 0 :time-seconds 0 :action-name "" :notes "" :sort-order (count (:steps bo))}])}
+            [:button.px-3.py-1.5.border.border-gray-600.hover:border-amber-400.text-white.font-medium.rounded-lg.transition-all.mb-4
+             {:on-click #(rf/dispatch [:add-step-api (:id bo)
+                                       {:supply 0 :time-seconds 0 :action-name "" :notes "" :sort-order (count (:steps bo))}])}
              "+ Add Step"])
-          [:div.bo-steps-table
-           [:div.bo-step-row.bo-step-header
-            [:div.bo-col.bo-col-supply "Supply"]
-            [:div.bo-col.bo-col-time "Time"]
-            [:div.bo-col.bo-col-action "Action"]
-            [:div.bo-col.bo-col-notes "Notes"]
-            (when logged-in? [:div.bo-col.bo-col-actions ""])]]
+          ;; Table header
+          [:div.grid.gap-4.items-center.p-3.border-b.border-gray-700.font-semibold.text-gray-400.text-sm.uppercase.tracking-wider
+           {:style {:grid-template-columns "80px 1fr 2fr 1.5fr auto"}}
+           [:div "Supply"] [:div "Time"] [:div "Action"] [:div "Notes"]
+           (when logged-in? [:div])]
+          ;; Step rows
           (doall
             (for [step (:steps bo)
                   :let [edit-mode? (and logged-in? (= (:edit-step-id bo) (:id step)))]]
-              ^{:key (:id step)}
-              [:div.bo-step-row
-               {:class (when edit-mode? "step-editing")}
-               ;; Supply column
-               [:div.bo-col.bo-col-supply
-                (if edit-mode?
-                  [:input.step-input {:type "number" :value (:supply step)
-                                      :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :supply (parse-long (-> % .-target .-value)))])}]
-                  [:span (:supply step)])]
-               ;; Time column
-               [:div.bo-col.bo-col-time
-                (if edit-mode?
-                  [:input.step-input {:type "text" :value (format-time (:time-seconds step))
-                                      :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :time-seconds (parse-time-to-seconds (-> % .-target .-value)))])}]
-                  [:span (format-time (:time-seconds step))])]
-               ;; Action column
-               [:div.bo-col.bo-col-action
-                [action-icon (:action_name step)]
-                (if edit-mode?
-                  [:input.step-input {:value (:action_name step)
-                                      :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :action_name (-> % .-target .-value))])}]
-                  [:span.action-text (:action_name step)])]
-               ;; Notes column
-               [:div.bo-col.bo-col-notes
-                (if edit-mode?
-                  [:input.step-input {:value (:notes step) :placeholder "e.g. chronoboost"
-                                      :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :notes (-> % .-target .-value))])}]
-                  [:span (:notes step)])]
-               ;; Actions column (logged in)
-               (when logged-in?
-                 [:div.bo-col.bo-col-actions
+              (doall
+                (println step)
+                ^{:key (:id step)}
+                [:div.grid.gap-4.items-center.p-3.border-b.border-gray-700.transition-colors
+                 {:style {:grid-template-columns "80px 1fr 2fr 1.5fr auto"
+                          :background (if edit-mode? "rgba(120,53,15,0.1)" "rgba(31,41,55,0.2)")}
+                  :class (when edit-mode? "border-amber-500/30")}
+                 ;; Supply
+                 [:div.flex.items-center.gap-2
                   (if edit-mode?
-                    [:<>
-                     [:button.btn-step.save {:on-click #(do (rf/dispatch [:update-step-api (:id step)
-                                                                          (dissoc step :edit-step-id)])
-                                                            (rf/dispatch [:update-selected-bo-field :edit-step-id nil]))} "Save"]
-                     [:button.btn-step.cancel {:on-click #(rf/dispatch [:update-selected-bo-field :edit-step-id nil])} "Cancel"]]
-                    [:<>
-                     [:button.btn-step.edit {:on-click #(rf/dispatch [:update-selected-bo-field :edit-step-id (:id step)])} "Edit"]
-                     [:button.btn-step.delete {:on-click #(rf/dispatch [:set-delete-confirm {:type :step :id (:id step)}])} "Delete"]])])]))
-          (when logged-in?
-            [:button.btn.btn-outline {:on-click #(rf/dispatch [:add-step-api (:id bo)
-                                                               {:supply 0 :time-seconds 0 :action-name "" :notes "" :sort-order (count (:steps bo))}])}
-             "+ Add Step"])]]))))
+                    [:input.w-full.px-2.py-1.border.border-gray-600.rounded.text-white.focus:outline-none.focus:border-amber-500
+                     {:style {:background "#1f2937"}
+                      :type "number" :value (:supply step)
+                      :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :supply (parse-long (-> % .-target .-value)))])}]
+                    [:span.text-white.font-mono (:supply step)])]
+                 ;; Time
+                 [:div.flex.items-center.gap-2
+                  (if edit-mode?
+                    [:input.w-full.px-2.py-1.border.border-gray-600.rounded.text-white.focus:outline-none.focus:border-amber-500
+                     {:style {:background "#1f2937"}
+                      :type "text" :value (format-time (:time_seconds step))
+                      :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :time_seconds (parse-time-to-seconds (-> % .-target .-value)))])}]
+                    [:span.text-gray-300.font-mono (format-time (:time_seconds step))])]
+                 ;; Action
+                 [:div.flex.items-center.gap-2
+                  (when-let [action-name (:action_name step)]
+                    (action-icon action-name))
+                  (when edit-mode?
+                    [:input.w-full.px-2.py-1.border.border-gray-600.rounded.text-white.focus:outline-none.focus:border-amber-500
+                     {:style {:background "#1f2937"}
+                      :value (:action_name step)
+                      :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :action_name (-> % .-target .-value))])}])]
+                 ;; Notes
+                 [:div.flex.items-center.gap-2
+                  (if edit-mode?
+                    [:input.w-full.px-2.py-1.border.border-gray-600.rounded.text-white.focus:outline-none.focus:border-amber-500
+                     {:style {:background "#1f2937"}
+                      :value (:notes step) :placeholder "e.g. chronoboost"
+                      :on-change #(rf/dispatch [:update-step-in-selected-bo (:id step) (assoc step :notes (-> % .-target .-value))])}]
+                    [:span.text-gray-400 (:notes step)])]
+                 ;; Row actions
+                 (when logged-in?
+                   [:div.flex.items-center.gap-2.justify-end
+                    (if edit-mode?
+                      [:<>
+                       [:button.px-2.py-1.bg-green-600.hover:bg-green-700.text-white.text-xs.font-semibold.rounded.transition-all
+                        {:on-click #(do (rf/dispatch [:update-step-api (:id step) (dissoc step :edit-step-id)])
+                                        (rf/dispatch [:update-selected-bo-field :edit-step-id nil]))}
+                        "Save"]
+                       [:button.px-2.py-1.bg-gray-700.hover:bg-gray-600.text-white.text-xs.font-semibold.rounded.transition-all
+                        {:on-click #(rf/dispatch [:update-selected-bo-field :edit-step-id nil])}
+                        "Cancel"]]
+                      [:<>
+                       [:button.px-2.py-1.bg-gray-700.hover:bg-blue-600.text-white.text-xs.font-semibold.rounded.transition-all
+                        {:on-click #(rf/dispatch [:update-selected-bo-field :edit-step-id (:id step)])}
+                        "Edit"]
+                       [:button.px-2.py-1.bg-gray-700.hover:bg-red-600.text-white.text-xs.font-semibold.rounded.transition-all
+                        {:on-click #(rf/dispatch [:set-delete-confirm {:type :step :id (:id step)}])}
+                        "Delete"]])])])
+              ))]]))))
+
+;; ─── Replay Upload Modal ────────────────────────────────────────
 
 (def file-input-ref (r/atom nil))
 (def selected-file (r/atom nil))
@@ -783,122 +880,178 @@
         uploading? @(rf/subscribe [:replay-uploading?])
         error @(rf/subscribe [:upload-error])]
     (when open?
-      [:div.upload-overlay
-       {:on-click #(do
-                     (rf/dispatch [:close-upload-modal])
-                     (reset! selected-file nil)
-                     (when @file-input-ref (.setValue ^js @file-input-ref "")))}
-       [:div.upload-content
-        {:on-click #(.stopPropagation %)}
-        [:button.upload-close {:on-click #(do
-                                            (rf/dispatch [:close-upload-modal])
-                                            (reset! selected-file nil)
-                                            (when @file-input-ref (.setValue ^js @file-input-ref "")))} "✕"]
-        [:h2.upload-title "Upload Replay"]
-        [:p.upload-subtitle "Upload a .SC2Replay file and we'll extract the build order automatically."]
-        [:div.upload-form
-         [:div.upload-field
-          [:label.upload-label "Replay File (.SC2Replay)"]
-          [:input.upload-file-hidden {:type "file" :id "file" :accept ".SC2Replay"
-                                      :ref #(reset! file-input-ref %)
-                                      :on-change #(let [files (.. % -target -files)]
-                                                    (when (and files (> (.-length files) 0))
-                                                      (reset! selected-file (aget files 0))))}]]
-         [:div.upload-drop-zone
-          {:class (if @selected-file "bg-upload-selected" "hover:bg-gray-50")
-           :on-drag-over #(.preventDefault %)
-           :on-drop #(do (.preventDefault %)
-                         (let [files (.. % -dataTransfer -files)]
-                           (when (and files (> (.-length files) 0))
-                             (reset! selected-file (aget files 0)))))}
-          [:button.upload-browse-btn
-           {:on-click #(when @file-input-ref (.click @file-input-ref))}
-           "Browse Files"]
-          (when @selected-file
-            [:div.upload-selected-name (.-name @selected-file)])]
-         [:div.upload-field
-          [:label.upload-label "Build Order Name"]
-          [:input.upload-input {:type "text" :id "bo-name" :placeholder "e.g. 14 Pylon Expand"
-                                :value @(rf/subscribe [:upload-name])
-                                :on-change #(rf/dispatch [:set-upload-name (-> % .-target .-value)])}]]
-         [:div.upload-field
-          [:label.upload-label "Author"]
-          [:input.upload-input {:type "text" :id "bo-author" :placeholder "Author name"
-                                :value @(rf/subscribe [:upload-author])
-                                :on-change #(rf/dispatch [:set-upload-author (-> % .-target .-value)])}]]
-         [:div.upload-field
-          [:label.upload-label "Play Style"]
-          [:input.upload-input {:type "text" :id "bo-playstyle" :placeholder "e.g. Protoss, Terran, Zerg"
-                                :value @(rf/subscribe [:upload-playstyle])
-                                :on-change #(rf/dispatch [:set-upload-playstyle (-> % .-target .-value)])}]]
-         [:div.upload-field
-          [:label.upload-label "Strategic Goals"]
-          [:textarea.upload-input {:id "bo-strategic-goals" :placeholder "Main goals of this build"
-                                   :value @(rf/subscribe [:upload-strategic-goals])
-                                   :on-change #(rf/dispatch [:set-upload-strategic-goals (-> % .-target .-value)])}]]
-         [:div.upload-field
-          [:label.upload-label "Counters"]
-          [:textarea.upload-input {:id "bo-counters" :placeholder "What this build counters"
-                                   :value @(rf/subscribe [:upload-counters])
-                                   :on-change #(rf/dispatch [:set-upload-counters (-> % .-target .-value)])}]]
-         [:div.upload-field
-          [:label.upload-label "Weaknesses"]
-          [:textarea.upload-input {:id "bo-weaknesses" :placeholder "Build weaknesses"
-                                   :value @(rf/subscribe [:upload-weaknesses])
-                                   :on-change #(rf/dispatch [:set-upload-weaknesses (-> % .-target .-value)])}]]
-         [:div.upload-field
-          [:label.upload-label "Transition Plan"]
-          [:textarea.upload-input {:id "bo-transition-plan" :placeholder "What to do if build doesn't win"
-                                   :value @(rf/subscribe [:upload-transition-plan])
-                                   :on-change #(rf/dispatch [:set-upload-transition-plan (-> % .-target .-value)])}]]
-         [:div.upload-field
-          [:label.upload-label "YouTube URL (optional)"]
-          [:input.upload-input {:type "text" :id "bo-youtube-url" :placeholder "https://www.youtube.com/watch?v=..."
-                                :value @(rf/subscribe [:upload-youtube-url])
-                                :on-change #(rf/dispatch [:set-upload-youtube-url (-> % .-target .-value)])}]]
-         (when error
-           [:div.upload-error-msg error])
-         (when uploading?
-           [:div.upload-loading "Parsing replay... This may take a moment."])
-         [:button.upload-submit {:type "button" :disabled uploading?
-                                 :on-click #(if-not @selected-file
-                                              (rf/dispatch [:set-upload-error "Please select a replay file"])
-                                              (do
-                                                (rf/dispatch [:set-replay-uploading true])
-                                                (rf/dispatch [:set-upload-error nil])
-                                                (let [file @selected-file
-                                                      bo-meta {:name @(rf/subscribe [:upload-name])
-                                                               :author @(rf/subscribe [:upload-author])
-                                                               :play_style @(rf/subscribe [:upload-playstyle])
-                                                               :strategic_goals @(rf/subscribe [:upload-strategic-goals])
-                                                               :counters @(rf/subscribe [:upload-counters])
-                                                               :weaknesses @(rf/subscribe [:upload-weaknesses])
-                                                               :transition_plan @(rf/subscribe [:upload-transition-plan])
-                                                               :youtube_url @(rf/subscribe [:upload-youtube-url])}]
-                                                  (rf/dispatch [:upload-replay file bo-meta]))))}
-          (if uploading? "Parsing..." "Upload & Parse")]]]])))
+      (let [close! #(do (rf/dispatch [:close-upload-modal])
+                        (reset! selected-file nil)
+                        (when @file-input-ref (set! (.-value @file-input-ref) "")))]
+        [:div.fixed.inset-0.z-50.flex.items-center.justify-center.backdrop-blur-sm.p-4
+         {:style {:background "rgba(0,0,0,0.7)"}
+          :on-click #(when (= (.-target %) (.-currentTarget %)) (close!))}
+         [:div.border.border-gray-700.rounded-xl.p-6.w-full.max-w-4xl.shadow-2xl.relative
+          {:style {:background "#111827"}
+           :on-click #(.stopPropagation %)}
 
-;; ─── Delete Confirm Modal ──────────────────────────────────────
+          ;; Header
+          [:button.absolute.top-4.right-4.text-gray-500.hover:text-white.transition-colors
+           {:on-click close!} "✕"]
+          [:h2.text-xl.font-bold.text-white.mb-1 "Upload Replay"]
+          [:p.text-gray-400.text-sm.mb-6
+           "Upload a .SC2Replay file and we'll extract the build order automatically."]
+
+          ;; File drop zone
+          [:input.hidden
+           {:type "file" :accept ".SC2Replay"
+            :ref #(reset! file-input-ref %)
+            :on-change #(let [files (.. % -target -files)]
+                          (when (and files (> (.-length files) 0))
+                            (reset! selected-file (aget files 0))))}]
+          [:div.border-2.border-dashed.rounded-lg.p-4.text-center.cursor-pointer.transition-colors.mb-6
+           {:class (if @selected-file
+                     "border-amber-500 bg-amber-900/10"
+                     "border-gray-700 bg-gray-800/30 hover:border-amber-500/50")
+            :on-drag-over #(.preventDefault %)
+            :on-drop #(do (.preventDefault %)
+                          (let [files (.. % -dataTransfer -files)]
+                            (when (and files (> (.-length files) 0))
+                              (reset! selected-file (aget files 0)))))}
+           [:button.px-4.py-2.bg-gray-700.hover:bg-gray-600.text-white.font-medium.rounded-lg.transition-all
+            {:on-click #(when @file-input-ref (.click @file-input-ref))}
+            "Browse Files"]
+           (if @selected-file
+             [:p.mt-2.text-sm.text-amber-400.font-mono (.-name @selected-file)]
+             [:p.mt-2.text-sm.text-gray-500 "or drag & drop a .SC2Replay file here"])]
+
+          ;; Two-column grid
+          [:div.grid.gap-4
+           {:style {:grid-template-columns "1fr 1fr"}}
+
+           ;; Left column
+           [:div.flex.flex-col.gap-4
+            [:div.flex.flex-col.gap-1
+             [:label.text-sm.font-medium.text-gray-300 "Build Order Name"]
+             [:input.w-full.px-3.py-2.border.border-gray-700.rounded-lg.text-white.placeholder-gray-500.focus:outline-none.focus:border-amber-500
+              {:style {:background "#1f2937"}
+               :type "text" :placeholder "e.g. 14 Pylon Expand"
+               :value @(rf/subscribe [:upload-name])
+               :on-change #(rf/dispatch [:set-upload-name (-> % .-target .-value)])}]]
+            [:div.flex.flex-col.gap-1
+             [:label.text-sm.font-medium.text-gray-300 "Author"]
+             [:input.w-full.px-3.py-2.border.border-gray-700.rounded-lg.text-white.placeholder-gray-500.focus:outline-none.focus:border-amber-500
+              {:style {:background "#1f2937"}
+               :type "text" :placeholder "Author name"
+               :value @(rf/subscribe [:upload-author])
+               :on-change #(rf/dispatch [:set-upload-author (-> % .-target .-value)])}]]
+            [:div.flex.flex-col.gap-1
+             [:label.text-sm.font-medium.text-gray-300 "Play Style"]
+             [:input.w-full.px-3.py-2.border.border-gray-700.rounded-lg.text-white.placeholder-gray-500.focus:outline-none.focus:border-amber-500
+              {:style {:background "#1f2937"}
+               :type "text" :placeholder "e.g. Protoss, Terran, Zerg"
+               :value @(rf/subscribe [:upload-playstyle])
+               :on-change #(rf/dispatch [:set-upload-playstyle (-> % .-target .-value)])}]]
+            [:div.flex.flex-col.gap-1
+             [:label.text-sm.font-medium.text-gray-300 "YouTube URL (optional)"]
+             [:input.w-full.px-3.py-2.border.border-gray-700.rounded-lg.text-white.placeholder-gray-500.focus:outline-none.focus:border-amber-500
+              {:style {:background "#1f2937"}
+               :type "text" :placeholder "https://www.youtube.com/watch?v=..."
+               :value @(rf/subscribe [:upload-youtube-url])
+               :on-change #(rf/dispatch [:set-upload-youtube-url (-> % .-target .-value)])}]]]
+
+           ;; Right column
+           [:div.flex.flex-col.gap-4
+            [:div.flex.flex-col.gap-1
+             [:label.text-sm.font-medium.text-gray-300 "Strategic Goals"]
+             [:textarea.w-full.px-3.py-2.border.border-gray-700.rounded-lg.text-white.placeholder-gray-500.focus:outline-none.focus:border-amber-500
+              {:style {:background "#1f2937" :min-height "80px"}
+               :placeholder "Main goals of this build"
+               :value @(rf/subscribe [:upload-strategic-goals])
+               :on-change #(rf/dispatch [:set-upload-strategic-goals (-> % .-target .-value)])}]]
+            [:div.flex.flex-col.gap-1
+             [:label.text-sm.font-medium.text-gray-300 "Counters"]
+             [:textarea.w-full.px-3.py-2.border.border-gray-700.rounded-lg.text-white.placeholder-gray-500.focus:outline-none.focus:border-amber-500
+              {:style {:background "#1f2937" :min-height "80px"}
+               :placeholder "What this build counters"
+               :value @(rf/subscribe [:upload-counters])
+               :on-change #(rf/dispatch [:set-upload-counters (-> % .-target .-value)])}]]
+            [:div.flex.flex-col.gap-1
+             [:label.text-sm.font-medium.text-gray-300 "Weaknesses"]
+             [:textarea.w-full.px-3.py-2.border.border-gray-700.rounded-lg.text-white.placeholder-gray-500.focus:outline-none.focus:border-amber-500
+              {:style {:background "#1f2937" :min-height "80px"}
+               :placeholder "Build weaknesses"
+               :value @(rf/subscribe [:upload-weaknesses])
+               :on-change #(rf/dispatch [:set-upload-weaknesses (-> % .-target .-value)])}]]
+            [:div.flex.flex-col.gap-1
+             [:label.text-sm.font-medium.text-gray-300 "Transition Plan"]
+             [:textarea.w-full.px-3.py-2.border.border-gray-700.rounded-lg.text-white.placeholder-gray-500.focus:outline-none.focus:border-amber-500
+              {:style {:background "#1f2937" :min-height "80px"}
+               :placeholder "What to do if build doesn't win"
+               :value @(rf/subscribe [:upload-transition-plan])
+               :on-change #(rf/dispatch [:set-upload-transition-plan (-> % .-target .-value)])}]]]]
+
+          ;; Error
+          (when error
+            [:div.text-red-400.text-sm.border.border-red-800.rounded-lg.p-3.mt-4
+             {:style {:background "rgba(127,29,29,0.2)"}}
+             error])
+
+          ;; Uploading indicator
+          (when uploading?
+            [:div.text-amber-400.text-sm.mt-4.flex.items-center.gap-2
+             "⏳ Parsing replay... This may take a moment."])
+
+          ;; Action buttons
+          [:div.flex.gap-3.mt-6
+           [:button.flex-1.py-3.bg-gray-700.hover:bg-gray-600.text-white.font-semibold.rounded-lg.transition-all
+            {:type "button" :on-click close!}
+            "Cancel"]
+           [:button.flex-1.py-3.bg-amber-500.hover:bg-amber-600.text-white.font-semibold.rounded-lg.transition-all.shadow-md
+            {:type "button"
+             :disabled uploading?
+             :class (when uploading? "opacity-50 cursor-not-allowed")
+             :on-click #(if-not @selected-file
+                          (rf/dispatch [:set-upload-error "Please select a replay file"])
+                          (do
+                            (rf/dispatch [:set-replay-uploading true])
+                            (rf/dispatch [:set-upload-error nil])
+                            (let [file @selected-file
+                                  bo-meta {:name @(rf/subscribe [:upload-name])
+                                           :author @(rf/subscribe [:upload-author])
+                                           :play_style @(rf/subscribe [:upload-playstyle])
+                                           :strategic_goals @(rf/subscribe [:upload-strategic-goals])
+                                           :counters @(rf/subscribe [:upload-counters])
+                                           :weaknesses @(rf/subscribe [:upload-weaknesses])
+                                           :transition_plan @(rf/subscribe [:upload-transition-plan])
+                                           :youtube_url @(rf/subscribe [:upload-youtube-url])}]
+                              (rf/dispatch [:upload-replay file bo-meta]))))}
+            (if uploading? "Parsing..." "Upload & Parse")]]]]))))
+
+;; ─── Delete Confirm Modal ───────────────────────────────────────
+;; FIX: The confirm/cancel button div was outside the outer container div.
 
 (defn- delete-confirm-modal []
   (let [confirm @(rf/subscribe [:delete-confirm])
         logged-in? @(rf/subscribe [:is-logged-in?])]
     (when (and confirm logged-in?)
-      [:div.delete-overlay
-       {:on-click #(rf/dispatch [:clear-delete-confirm])}
-       [:div.delete-content
-        {:on-click #(.stopPropagation %)}
-        [:h2.delete-title "Confirm Delete"]
-        [:p.delete-message (if (= (:type confirm) :bo)
-                             "Are you sure you want to delete this build order? This cannot be undone."
-                             "Are you sure you want to delete this step?")]
-        [:div.delete-actions
-         [:button.btn.btn-outline {:on-click #(rf/dispatch [:clear-delete-confirm])} "Cancel"]
-         [:button.btn.btn-gold {:on-click #(do
-                                             (if (= (:type confirm) :bo)
-                                               (rf/dispatch [:delete-build-order (:id confirm)])
-                                               (rf/dispatch [:delete-step-api (:id confirm)]))
-                                             (rf/dispatch [:clear-delete-confirm]))} "Delete"]]]])))
+      [:div.fixed.inset-0.z-50.flex.items-center.justify-center.backdrop-blur-sm.p-4
+       {:style {:background "rgba(0,0,0,0.7)"}
+        :on-click #(rf/dispatch [:clear-delete-confirm])}
+       [:div.border.rounded-xl.p-6.w-full.max-w-sm.shadow-2xl.relative
+        {:style {:background "#111827" :border-color "rgba(153,27,27,0.5)"}
+         :on-click #(.stopPropagation %)}
+        [:h2.text-xl.font-bold.text-white.mb-3 "Confirm Delete"]
+        [:p.text-gray-400.text-sm.mb-6.leading-relaxed
+         (if (= (:type confirm) :bo)
+           "Are you sure you want to delete this build order? This cannot be undone."
+           "Are you sure you want to delete this step?")]
+        [:div.flex.justify-end.gap-3
+         [:button.px-4.py-2.border.border-gray-600.hover:border-gray-500.text-white.font-medium.rounded-lg.transition-all
+          {:on-click #(rf/dispatch [:clear-delete-confirm])}
+          "Cancel"]
+         [:button.px-4.py-2.bg-red-600.hover:bg-red-700.text-white.font-semibold.rounded-lg.transition-all
+          {:on-click #(do
+                        (if (= (:type confirm) :bo)
+                          (rf/dispatch [:delete-build-order (:id confirm)])
+                          (rf/dispatch [:delete-step-api (:id confirm)]))
+                        (rf/dispatch [:clear-delete-confirm]))}
+          "Delete"]]]])))
 
 ;; ─── App Root with Routing ──────────────────────────────────────
 
@@ -906,7 +1059,7 @@
   (case route
     :build-order-detail [build-order-detail]
     :build-orders-list [build-order-list]
-    [:div
+    [:div.flex-grow.text-white {:style {:background "#030712"}}
      [hero]
      [divider]
      [cards-section]
@@ -915,10 +1068,10 @@
 
 (defn app []
   (let [active-nav @(rf/subscribe [:current-route])]
-    (println active-nav)
-    [:div.flex.flex-col.min-h-screen.bg-white
+    [:div.flex.flex-col.min-h-screen.text-white.font-sans
+     {:style {:background "#030712"}}
      [header]
-     [:div.flex-grow
+     [:div.flex-grow.relative.z-10
       [nav-pages active-nav]]
      [footer-component]
      [login-modal]

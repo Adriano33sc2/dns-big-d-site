@@ -1,5 +1,6 @@
 (ns dns-big-d-site.backend.db
-  (:require [next.jdbc :as jdbc])
+  (:require [next.jdbc :as jdbc]
+            [next.jdbc.sql :as sql])
   (:import (org.postgresql.ds PGSimpleDataSource)))
 
 (defn get-db-url []
@@ -17,6 +18,9 @@
 (defn init-db! []
   (jdbc/execute! ds ["SELECT 1"])
   (println "Database connection established"))
+
+(defn insert-multi! [table columns dataset]
+  (sql/insert-multi! ds table columns dataset))
 
 (defn execute! [sql & params]
   (jdbc/execute! ds (into [sql] params)))

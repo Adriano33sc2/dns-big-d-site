@@ -57,8 +57,8 @@
     {:status 200 :body {:build-orders rows}}))
 
 (defn- get-build-order-by-id [{{:keys [id]} :params}]
-  (let [bo (db/execute-one! "SELECT * FROM build_orders WHERE id = ?" id)
-        steps (db/execute! "SELECT * FROM build_order_steps WHERE build_order_id = ? ORDER BY sort_order" id)
+  (let [bo (db/execute-one! "SELECT * FROM build_orders WHERE id = ?" (parse-long id))
+        steps (db/execute! "SELECT * FROM build_order_steps WHERE build_order_id = ? ORDER BY sort_order" (parse-long id))
         bo (when bo
              (-> bo
                  (assoc :steps steps)))]
@@ -97,29 +97,39 @@
   (db/execute! "DELETE FROM build_orders WHERE id = ?" id)
   {:status 204})
 
-(defn- add-step [bo-id params]
-  (let [{:keys [supply time-seconds action-name notes sort-order]} params]
+(defn- add-steps [id steps]
+  (let [rows (mapv (fn [{:keys [supply time-seconds action-name notes sort-order]}]
+                     [id supply time-seconds action-name notes sort-order])
+                   steps)]
+    (db/insert-multi! :build_order_steps [:build_order_id :supply :time_seconds :action_name :notes :sort_order] rows)))
+
+(defn- add-step [{{:keys [id]} :params {:keys [supply time-seconds action-name notes sort-order]} :body}]
+  (try
     (db/execute-one! "INSERT INTO build_order_steps (build_order_id, supply, time_seconds, action_name, notes, sort_order)
                       VALUES (?, ?, ?, ?, ?, ?)"
-                     bo-id supply time-seconds action-name notes sort-order)))
+                     id supply time-seconds action-name notes sort-order)
+    (catch Exception e
+      {:status 500 :body {:error (.getMessage e)}})))
 
-(defn- update-step [step-id params]
-  (let [{:keys [supply time_seconds action_name notes sort_order]} params
-        set-clauses (filter second
-                            [["supply" supply]
-                             ["time_seconds" time_seconds]
-                             ["action_name" action_name]
-                             ["notes" notes]
-                             ["sort_order" sort_order]])
-        set-str (str/join ", " (map #(format "%s = ?" (first %)) set-clauses))
-        set-vals (map second set-clauses)]
-    (when (empty? set-str)
-      (throw (Exception. "No fields to update")))
-    (db/execute! (str "UPDATE build_order_steps SET " set-str " WHERE id = ?")
-                 (into set-vals [step-id]))
-    (db/execute-one! "SELECT * FROM build_order_steps WHERE id = ?" step-id)))
+(defn- update-step [{{:keys [step-id]} :params {:keys [supply time_seconds action_name notes sort_order]} :body}]
+  (try
+    (let [set-clauses (filter second
+                              [["supply" supply]
+                               ["time_seconds" time_seconds]
+                               ["action_name" action_name]
+                               ["notes" notes]
+                               ["sort_order" sort_order]])
+          set-str (str/join ", " (map #(format "%s = ?" (first %)) set-clauses))
+          set-vals (map second set-clauses)]
+      (when (empty? set-str)
+        (throw (Exception. "No fields to update")))
+      (apply (partial db/execute! (str "UPDATE build_order_steps SET " set-str " WHERE id = ?")) (into set-vals [step-id]))
+      (db/execute-one! "SELECT * FROM build_order_steps WHERE id = ?" step-id))
+    {:status 200}
+    (catch Exception e
+      {:status 500 :body {:error (.getMessage e)}})))
 
-(defn- delete-step [step-id]
+(defn- delete-step [{{:keys [step-id]} :params}]
   (db/execute! "DELETE FROM build_order_steps WHERE id = ?" step-id)
   {:status 204})
 
@@ -139,15 +149,14 @@
                     steps-with-bo-id (mapv (fn [step idx]
                                              (assoc step :build-order-id bo-id :sort-order idx))
                                            steps (range))]
-                (doseq [step steps-with-bo-id]
-                  (add-step bo-id step))
+                (add-steps bo-id steps-with-bo-id)
                 {:status 201
-                 :body (get-build-order-by-id {:id bo-id})})
+                 :body (:body (get-build-order-by-id {:params {:id (str bo-id)}}))})
               {:status 500 :body {:error "Spawningtool parsing failed"}}))))
       (catch Exception e
         {:status 500 :body {:error (.getMessage e)}})
       (finally
-        (Files/delete replay-file)))))
+        (Files/delete (.toPath replay-file))))))
 
 (defn replay-upload [request]
   (let [file-data (get-in request [:params :file])
@@ -173,14 +182,11 @@
   (DELETE "/api/build-orders/:id" [id]
     (delete-build-order (Integer/parseInt id)))
 
-  (POST "/api/build-orders/:id/steps" [id]
-    {:status 201 :body #(add-step (Integer/parseInt id) (:body %))})
+  (POST "/api/build-orders/:id/steps" [] add-step)
 
-  (PUT "/api/build-orders/:id/steps/:step-id" [id step-id]
-    {:status 200 :body #(update-step (Integer/parseInt step-id) (:body %))})
+  (PUT "/api/build-orders/:id/steps/:step-id" [] update-step)
 
-  (DELETE "/api/build-orders/:id/steps/:step-id" [id step-id]
-    (delete-step (Integer/parseInt step-id)))
+  (DELETE "/api/build-orders/:id/steps/:step-id" [] delete-step)
 
   (POST "/api/replay/upload" [] replay-upload))
 

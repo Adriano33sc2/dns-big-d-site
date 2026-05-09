@@ -1,7 +1,8 @@
 (ns dns-big-d-site.core.events
   (:require [re-frame.core :refer [reg-event-db
-                                   reg-event-fx]]
+                                     reg-event-fx]]
             [ajax.core :as ajax]
+            [clojure.string :as str]
             [dns-big-d-site.core.db :refer [default-db]]))
 
 (defn- api-url []
@@ -100,8 +101,26 @@
 (reg-event-db :set-build-orders (fn [db [_ orders]]
                                   (assoc db :build-orders orders)))
 
+(defn- normalize-key [k]
+  (let [s (name k)]
+    (if (str/starts-with? s "build_orders/")
+      (keyword (subs s 14))
+      k)))
+
+(defn- normalize-key-map [m]
+  (when m
+    (into {} (mapv (fn [[k v]] [(-> k name keyword) v]) m))))
+
+(defn- normalize-bo [bo]
+  (when bo
+    (let [steps (:steps bo)]
+      (let [normalized-inner (normalize-key-map bo)
+            normalized-steps (when (seq steps)
+                               (mapv normalize-key-map steps))]
+        (assoc normalized-inner :steps normalized-steps)))))
+
 (reg-event-db :set-selected-build-order (fn [db [_ bo]]
-                                          (assoc db :selected-build-order bo)))
+                                           (assoc db :selected-build-order (normalize-bo bo))))
 
 (reg-event-db :set-loading (fn [db [_ val]]
                              (assoc db :loading? val)))
@@ -215,9 +234,6 @@
 (reg-event-db :fetch-bo-success (fn [db [_ response]]
                                   (assoc db :build-orders (:build-orders response))))
 
-(reg-event-db :fetch-bo-failure (fn [db [_ _]]
-                                  db))
-
 (reg-event-fx :fetch-build-order
               (fn [{:keys [db]} [_ id]]
                 {:http-xhrio {:method :get
@@ -229,8 +245,18 @@
                               :on-success [:fetch-single-bo-success]
                               :on-failure [:fetch-bo-failure]}}))
 
-(reg-event-db :fetch-single-bo-success (fn [db [_ response]]
-                                         (assoc db :selected-build-order (:body response))))
+(defn- normalize-step [step]
+  (let [inner (:build_order_steps step)]
+    (if inner
+      (-> inner
+          (update :id #(or (:build_order_steps/id step) %)))
+      step)))
+
+(reg-event-fx :fetch-single-bo-success (fn [{:keys [db]} [_ response]]
+                                         {:db db
+                                          :dispatch [:set-selected-build-order response]}))
+
+(reg-event-db :fetch-bo-failure (fn [db [_ _]] db))
 
 (reg-event-fx :create-build-order
               (fn [{:keys [db]} [_ params]]

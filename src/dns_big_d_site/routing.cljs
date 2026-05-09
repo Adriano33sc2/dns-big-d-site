@@ -7,28 +7,35 @@
         "build-orders" :build-orders-list
         ["build-orders/" :id] :build-order-detail}])
 
-(rf/reg-event-fx :navigate
-  (fn [{:keys [db]} [_ route]]
-    (cond-> {:dispatch [:set-current-route route]
-             :db (assoc db :current-route route)}
-      (= route :build-orders-list) (assoc :dispatch [:fetch-build-orders]))))
+(rf/reg-event-fx
+ :navigate
+ (fn [{:keys [db]} [_ route-map]]
+   (let [route (:route route-map)
+         id    (:id route-map)
+         db'   (assoc db :current-route route :current-route-id id)]
+     (cond
+       (= route :build-orders-list)
+       {:db db' :dispatch [:fetch-build-orders]}
 
-(rf/reg-event-db :set-current-route
-                 (fn [db [_ route]]
-                   (assoc db :current-route route)))
+       (= route :build-order-detail)
+       {:db db' :dispatch [:fetch-build-order id]}
+
+       :else
+       {:db db'}))))
 
 (defn match-route []
-  (let [path (or (.. js/location -pathname) "/")
+  (let [path   (or (.-pathname js/location) "/")
         result (bidi/match-route app-routes path)]
     (if result
-      (:template result)
-      :home)))
+      {:route (:template result)
+       :id    (get-in result [:route-params :id])}
+      {:route :home :id nil})))
 
-(defn- handle-pop-state [e]
-  (let [route (match-route)]
-    (rf/dispatch-sync [:navigate route])))
+(defn- handle-pop-state [_]
+  (let [{:keys [route id]} (match-route)]
+    (rf/dispatch-sync [:navigate {:route route :id id}])))
 
 (defn init-routing []
   (.addEventListener js/window "popstate" handle-pop-state)
-  (let [route (match-route)]
-    (rf/dispatch-sync [:navigate route])))
+  (let [{:keys [route id]} (match-route)]
+    (rf/dispatch-sync [:navigate {:route route :id id}])))
