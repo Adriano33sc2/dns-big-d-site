@@ -1,13 +1,11 @@
-FROM bellsoft/liberica-openjdk-alpine-musl:21
+FROM sn0wf1eld/cljs-shadowcljs-lein:latest
 
 WORKDIR /app
 
-# Copy pre-built jar and frontend assets
 COPY docker_temp/dns-big-d-site-standalone.jar ./standalone.jar
-COPY public/ ./public/
 
 # Copy venv from local build
-RUN apk add --no-cache python3 py3-pip
+RUN apt install -y python3 python3-venv python3-pip
 RUN python3 -m venv /app/venv
 RUN /app/venv/bin/pip install spawningtool
 

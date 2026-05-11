@@ -1,14 +1,13 @@
 #!/bin/bash
+set -euo pipefail
 NAME="sn0wf1eld/dns-big-d-website"
 VERSION=$1
 
 echo "Building frontend..."
-./node_modules/.bin/shadow-cljs release app
+./node_modules/.bin/shadow-cljs release app && lein uberjar
 
-echo "Building uberjar..."
-lein uberjar
-
-mkdir docker_temp
+mkdir -p docker_temp
+rm -f docker_temp/*.jar
 
 cp target/dns-big-d-site-$VERSION-standalone.jar docker_temp/dns-big-d-site-standalone.jar
 
@@ -19,6 +18,7 @@ docker buildx create --use
 
 echo "Building and pushing Docker image..."
 docker buildx build \
+  --no-cache \
   --provenance=true --sbom=true \
   --platform linux/arm64/v8,linux/amd64 \
   --push \
