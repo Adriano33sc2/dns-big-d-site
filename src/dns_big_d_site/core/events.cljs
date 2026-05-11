@@ -5,8 +5,7 @@
             [clojure.string :as str]
             [dns-big-d-site.core.db :refer [default-db]]))
 
-(defn- api-url []
-  "http://localhost:3000")
+(def api-url "https://the-coaching-lab.net")
 
 (defn- auth-headers [db]
   (let [token (:auth-token db)]
@@ -45,7 +44,7 @@
                              password (get db :login-password)]
                          {:db db
                           :http-xhrio {:method :post
-                                       :uri "http://localhost:3000/api/auth/login"
+                                       :uri (str api-url "/api/auth/login")
                                        :params {:username username
                                                 :password password}
                                        :timeout 5000
@@ -164,7 +163,7 @@
 (reg-event-fx :add-step-api
               (fn [{:keys [db]} [_ bo-id params]]
                 {:http-xhrio {:method :post
-                              :uri (str (api-url) "/api/build-orders/" bo-id "/steps")
+                              :uri (str api-url "/api/build-orders/" bo-id "/steps")
                               :timeout 10000
                               :params params
                               :format (ajax/json-request-format)
@@ -184,7 +183,7 @@
                 (let [bo (:selected-build-order db)
                       bo-id (:id bo)]
                   {:http-xhrio {:method :put
-                                :uri (str (api-url) "/api/build-orders/" bo-id "/steps/" step-id)
+                                :uri (str api-url "/api/build-orders/" bo-id "/steps/" step-id)
                                 :timeout 10000
                                 :params params
                                 :format (ajax/json-request-format)
@@ -205,7 +204,7 @@
                 (let [bo (:selected-build-order db)
                       bo-id (:id bo)]
                   {:http-xhrio {:method :delete
-                                :uri (str (api-url) "/api/build-orders/" bo-id "/steps/" step-id)
+                                :uri (str api-url "/api/build-orders/" bo-id "/steps/" step-id)
                                 :timeout 10000
                                 :format (ajax/json-request-format)
                                 :response-format (ajax/json-response-format {:keywords? true})
@@ -224,7 +223,7 @@
 (reg-event-fx :fetch-build-orders
               (fn [{:keys [db]} _]
                 {:http-xhrio {:method :get
-                              :uri (str (api-url) "/api/build-orders")
+                              :uri (str api-url "/api/build-orders")
                               :timeout 10000
                               :format (ajax/json-request-format)
                               :response-format (ajax/json-response-format {:keywords? true})
@@ -238,7 +237,7 @@
 (reg-event-fx :fetch-build-order
               (fn [{:keys [db]} [_ id]]
                 {:http-xhrio {:method :get
-                              :uri (str (api-url) "/api/build-orders/" id)
+                              :uri (str api-url "/api/build-orders/" id)
                               :timeout 10000
                               :format (ajax/json-request-format)
                               :response-format (ajax/json-response-format {:keywords? true})
@@ -262,7 +261,7 @@
 (reg-event-fx :create-build-order
               (fn [{:keys [db]} [_ params]]
                 {:http-xhrio {:method :post
-                              :uri (str (api-url) "/api/build-orders")
+                              :uri (str api-url "/api/build-orders")
                               :timeout 10000
                               :params params
                               :format (ajax/json-request-format)
@@ -280,7 +279,7 @@
 (reg-event-fx :update-build-order-api
               (fn [{:keys [db]} [_ id params]]
                 {:http-xhrio {:method :put
-                              :uri (str (api-url) "/api/build-orders/" id)
+                              :uri (str api-url "/api/build-orders/" id)
                               :timeout 10000
                               :params params
                               :format (ajax/json-request-format)
@@ -303,7 +302,7 @@
 (reg-event-fx :delete-build-order
               (fn [{:keys [db]} [_ id]]
                 {:http-xhrio {:method :delete
-                              :uri (str (api-url) "/api/build-orders/" id)
+                              :uri (str api-url "/api/build-orders/" id)
                               :timeout 10000
                               :format (ajax/json-request-format)
                               :response-format (ajax/json-response-format {:keywords? true})
@@ -336,7 +335,7 @@
                   (doseq [[k v] bo-meta]
                     (.append form-data (name k) (str v)))
                   {:http-xhrio {:method :post
-                                :uri (str (api-url) "/api/replay/upload")
+                                :uri (str api-url "/api/replay/upload")
                                 :timeout 120000
                                 :body form-data
                                 :response-format (ajax/json-response-format {:keywords? true})

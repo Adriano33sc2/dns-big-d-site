@@ -27,10 +27,10 @@
               (route/not-found "Not Found"))
       json/wrap-json-response
       (json/wrap-json-body {:key-fn keyword})
-      (wrap-cors :access-control-allow-origin [#"http://localhost:\d+"]
+      (wrap-cors :access-control-allow-origin [#"http://localhost:\d+" #"https://the-coaching-lab\.net"]
                  :access-control-allow-methods [:get :post :put :delete :options])
       wrap-keyword-params
-      (multipart/wrap-multipart-params {:max-file-size (* 1024 1024 50)}); 50MB max
+      (multipart/wrap-multipart-params {:max-file-size (* 1024 1024 50)}) ; 50MB max
       (wrap-resource "")))
 
 (defn -main [& [port]]
