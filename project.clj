@@ -34,12 +34,10 @@
                  [compojure "1.7.2"]
                  [ring/ring-json "0.5.1"]
                  [ring/ring-defaults "0.7.0"]
-                  [buddy/buddy-hashers "2.0.167" :exclusions [clojurewerkz/scrypt]]
-                  [com.lambdaworks/scrypt "1.4.0"]
+                 [buddy/buddy-hashers "2.0.167"]
+                 [com.lambdaworks/scrypt "1.4.0"]
                  [com.github.seancorfield/next.jdbc "1.3.1093"]
-                  [org.postgresql/postgresql "42.7.10"]]
-  :repositories [["central" {:url "https://repo1.maven.org/maven2"
-                             :checksum :ignore}]]
-  :profiles {:dev {:dependencies [[day8.re-frame/tracing "0.6.2"]
-                                  [day8.re-frame/re-frame-10x "1.10.1"]]}
-             :uberjar {:aot :all}})
+                 [org.postgresql/postgresql "42.7.1"]]
+                 :profiles {:dev {:dependencies [[day8.re-frame/tracing "0.6.2"]
+                                                 [day8.re-frame/re-frame-10x "1.10.1"]]}
+                            :uberjar {:aot :all}})

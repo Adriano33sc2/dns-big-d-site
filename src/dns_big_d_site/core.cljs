@@ -29,6 +29,8 @@
     :hero/cta-book "Book a Session"
     :hero/cta-youtube "Watch on YouTube"
 
+    :divider/label "ALL LEAGUES · ONE COACH"
+
     ;; Cards section
     :cards/title "Choose Your Path"
     :cards/subtitle "From live coaching to free guides — everything you need to dominate the ladder."
@@ -136,7 +138,7 @@
     :hero/cta-youtube "Voir sur YouTube"
 
     ;; Divider
-    :divider/label "TOUTES LES RACES · TOUTES LES LIGUES · UN COACH"
+    :divider/label "TOUTES LES LIGUES · UN COACH"
 
     ;; Cards section
     :cards/title "Choisissez Votre Voie"
@@ -272,7 +274,6 @@
      [:a.hover:text-amber-400.transition-colors
       {:href "#build-orders"
        :on-click #(do (.preventDefault %)
-                      (js/history.pushState nil "" "/build-orders")
                       (rf/dispatch [:navigate {:route :build-orders-list :id nil}]))}
       (t :nav/build-orders)]]
     [lang-switcher]]])
@@ -311,24 +312,25 @@
 
 (defn card-component [{:keys [id badge-icon bg-gradient]}]
   [:div.border.border-gray-700.rounded-xl.overflow-hidden.transition-all.duration-300.flex.flex-col
-   {:class "bg-gray-800/50 hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/10"
+   {:class "bg-gray-900 hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/10"
     :id (when (#{:discord :youtube} id) (name id))}
    ;; Thumbnail
-   [:div.relative.h-48.flex.items-center.justify-center.overflow-hidden
-    {:style {:background bg-gradient}}
-    ;; Label badge - top right
-    [:span.absolute.top-3.right-3.px-2.py-1.text-white.text-xs.font-mono.font-bold.rounded.border.border-white-20.tracking-widest
-     {:style {:background "rgba(0,0,0,0.45)" :letter-spacing "0.1em"}}
+   [:div.relative.flex.items-center.justify-center.overflow-hidden
+    {:style {:background bg-gradient :height "200px"}}
+    [:span.absolute.top-3.right-3.px-2.py-1.text-white.text-xs.font-mono.font-bold.rounded.tracking-widest
+     {:style {:background "rgba(0,0,0,0.45)" :border "1px solid rgba(255,255,255,0.15)"}}
      (str/upper-case (t (keyword (str "card." (name id)) "label")))]
-    ;; Icon box
-    [:div.flex.items-center.justify-center.rounded-2xl.border.border-white-20
-     {:style {:width "96px" :height "96px" :background "rgba(255,255,255,0.08)" :font-size "3rem"}}
+    [:div.flex.items-center.justify-center.rounded-2xl
+     {:style {:width "96px" :height "96px"
+              :background "rgba(255,255,255,0.08)"
+              :border "1px solid rgba(255,255,255,0.15)"
+              :font-size "3rem"}}
      badge-icon]]
    ;; Body
    [:div.p-6.flex.flex-col.flex-1.gap-3
-    [:p.text-xl.font-bold.text-white.mb-1 (t (keyword (str "card." (name id)) "title"))]
+    [:p.text-xl.font-bold.text-white (t (keyword (str "card." (name id)) "title"))]
     [:p.text-gray-400.text-sm.leading-relaxed (t (keyword (str "card." (name id)) "desc"))]
-    [:ul.list-none.p-0.mt-2.pt-4.border-t.border-gray-700.flex.flex-col.gap-1
+    [:ul.list-none.p-0.mt-2.pt-4.border-t.border-gray-700.flex.flex-col.gap-2
      (doall
        (for [i (range 1 10)
              :let [k (keyword (str "card." (name id)) (str "f" i))
@@ -337,7 +339,6 @@
          ^{:key i}
          [:li.flex.items-center.gap-2.text-sm.text-gray-300
           [:span.text-amber-500 "▸"] (t k)]))]
-    ;; Button pinned to bottom
     [:div.mt-auto.pt-4
      (case id
        :coaching
@@ -360,7 +361,7 @@
    [:div.text-center.mb-12 {:id "programs"}
     [:h2.text-3xl.md:text-4xl.font-bold.text-white.mb-3 (t :cards/title)]
     [:p.text-gray-400.max-w-xl.mx-auto (t :cards/subtitle)]]
-   [:div.grid.grid-cols-1.md:grid-cols-2.lg:grid-cols-3.gap-6.px-6
+   [:div.max-w-5xl.mx-auto.grid.grid-cols-1.md:grid-cols-2.lg:grid-cols-3.gap-6.px-6
     [card-component {:id :coaching :badge-icon "🎯"
                      :bg-gradient "linear-gradient(135deg, #0f2444, #1a3a6e)"}]
     [card-component {:id :discord :badge-icon "🛡️"
@@ -372,16 +373,19 @@
 ;; FIX: Missing closing paren for the enclosing [:div ...].
 
 (defn stats-strip []
-  [:div.grid.grid-cols-1.md:grid-cols-3.gap-6.px-6.py-12.border-y.border-gray-800
-   {:style {:background "rgba(17,24,39,0.5)"}}
-   (doall
-     (for [[num-k lbl-k] [[:stat/gm :stat/gm-label]
-                          [:stat/years :stat/years-label]
-                          [:stat/games :stat/games-label]]]
-       ^{:key lbl-k}
-       [:div.text-center
-        [:span.block.text-3xl.md:text-4xl.font-bold.text-amber-400.mb-1 (t num-k)]
-        [:span.block.text-sm.text-gray-400.uppercase.tracking-wider (t lbl-k)]]))])
+  [:div.py-12
+   [:div.max-w-5xl.mx-auto.px-6
+    [:div.border-t.border-gray-800.mb-12]
+    [:div.grid.grid-cols-1.md:grid-cols-3.gap-6
+     (doall
+       (for [[num-k lbl-k] [[:stat/gm :stat/gm-label]
+                            [:stat/years :stat/years-label]
+                            [:stat/games :stat/games-label]]]
+         ^{:key lbl-k}
+         [:div.text-center
+          [:span.block.text-3xl.md:text-4xl.font-bold.text-amber-400.mb-1 (t num-k)]
+          [:span.block.text-sm.text-gray-400.uppercase.tracking-wider (t lbl-k)]]))]
+    [:div.border-b.border-gray-800.mt-12]]])
 
 ;; ─── Testimonials ───────────────────────────────────────────────
 
@@ -400,24 +404,34 @@
                items [[1 :testimonial.1/quote :testimonial.1/author]
                       [2 :testimonial.2/quote :testimonial.2/author]
                       [3 :testimonial.3/quote :testimonial.3/author]]]
-           [:div.relative.py-16.px-6.max-w-4xl.mx-auto.text-center
-            [:div.relative {:style {:min-height "180px"}}
-             (doall
-               (for [[idx qk ak] items]
-                 ^{:key idx}
-                 [:div.absolute.inset-0.transition-opacity.duration-500.flex.flex-col.items-center.justify-center
-                  {:class (if (= (dec idx) active-idx) "opacity-100 z-10" "opacity-0 z-0 pointer-events-none")}
-                  [:blockquote.text-xl.md:text-2xl.text-gray-200.font-medium.italic.mb-4 (t qk)]
-                  [:p.text-sm.text-gray-500.font-semibold (t ak)]]))]
-            [:div.flex.gap-2.justify-center.mt-8
-             (doall
-               (for [i (range 3)]
-                 ^{:key i}
-                 [:button.w-3.h-3.rounded-full.bg-gray-600.transition-all.duration-200.hover:bg-gray-500
-                  {:class (when (= i active-idx) "bg-amber-400 w-8")
-                   :on-click (fn []
-                               (rf/dispatch [:set-active-testimonial i])
-                               (start-timer))}]))]]))})))
+           [:div.py-20.px-6
+            [:div.max-w-5xl.mx-auto
+             [:div.relative {:style {:min-height "220px"}}
+              ;; Large quote mark
+              [:div.text-amber-500.font-bold.mb-4 {:style {:font-size "2.5rem" :line-height "1"}} "❝"]
+              (doall
+                (for [[idx qk ak] items]
+                  ^{:key idx}
+                  [:div.absolute.inset-0.transition-opacity.duration-500.flex.flex-col.pt-10
+                   {:class (if (= (dec idx) active-idx) "opacity-100 z-10" "opacity-0 z-0 pointer-events-none")}
+                   [:blockquote.text-xl.md:text-2xl.text-gray-200.font-medium.italic.mb-6.leading-relaxed
+                    (t qk)]
+                   [:p.text-sm.font-mono.font-bold.tracking-widest
+                    {:style {:color "#f59e0b"}}
+                    (t ak)]]))]
+             ;; Dots
+             [:div.flex.gap-3.justify-center.mt-10
+              (doall
+                (for [i (range 3)]
+                  ^{:key i}
+                  [:button.rounded-full.transition-all.duration-200
+                   {:style (if (= i active-idx)
+                             {:width "12px" :height "12px" :background "#f59e0b" :border "none"}
+                             {:width "12px" :height "12px" :background "transparent"
+                              :border "1px solid #6b7280"})
+                    :on-click (fn []
+                                (rf/dispatch [:set-active-testimonial i])
+                                (start-timer))}]))]]]))})))
 
 ;; ─── Footer ─────────────────────────────────────────────────────
 
@@ -425,9 +439,9 @@
   (let [click-count (r/atom 0)
         timer (r/atom nil)]
     (fn []
-      [:footer.py-12.px-6.border-t.border-gray-800.text-center
+      [:footer.py-6.px-6.border-t.border-gray-800.text-center.sticky.bottom-0.z-50
        {:style {:background "#030712"}}
-       [:div.mb-4.font-bold.text-lg.text-white "DnS Coaching"]
+       [:div.mb-1.font-bold.text-lg.text-white "DnS Coaching"]
        [:p.cursor-pointer.text-gray-500.text-sm.hover:text-gray-300.transition-colors
         {:on-click (fn []
                      (reset! click-count (inc @click-count))
@@ -661,7 +675,6 @@
                {:class "bg-slate-900 hover:border-amber-400 hover:shadow-[0_0_15px_rgba(245,158,11,0.3)]"
                 :on-click #(do
                              (.stopPropagation %)
-                             (js/history.pushState nil "" (str "/build-orders/" (:build_orders/id bo)))
                              (rf/dispatch [:set-selected-build-order bo])
                              (rf/dispatch [:navigate {:route :build-order-detail :id (str (:build_orders/id bo))}]))}
 

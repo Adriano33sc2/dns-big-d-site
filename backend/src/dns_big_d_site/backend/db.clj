@@ -51,7 +51,7 @@
   CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 
   INSERT INTO users (username, password_hash, role) VALUES
-    ('admin', 'bcrypt+sha512$ed31ec403ee3f4f8c0cebd51d6ca14e9$12$ba580f2b18e310d9f6ed2f55d203cf6375325baca388bab6', 'admin')
+    ('admin', 'bcrypt+sha512$8048648c86b9085446fccb3df12d0317$12$11561c14bb1e14de77f959746e6f14a26570164cecd5672b', 'admin')
   ON CONFLICT (username) DO NOTHING;
 
   CREATE TABLE IF NOT EXISTS build_orders (
