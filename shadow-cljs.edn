@@ -2,6 +2,7 @@
 
  :jvm-opts ["-Xmx1G" "-Xms1G"]
 
+  :mvn-repos [["central" {:url "https://maven-central.storage-download.googleapis.com/maven2"}]]
   :dependencies [[reagent "2.0.0-alpha2"]
                  [re-frame "1.4.3"]
                  [bidi "2.1.5"]

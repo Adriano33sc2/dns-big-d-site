@@ -1,27 +1,15 @@
-FROM sn0wf1eld/cljs-shadowcljs-lein:2025.38.1 AS builder
-WORKDIR /app
-COPY project.clj ./
-RUN lein deps
-COPY package.json package-lock.json ./
-RUN npm install
-COPY src/ src/
-COPY backend/ backend/
-COPY public/ public/
-COPY shadow-cljs.edn ./
-RUN ./node_modules/.bin/shadow-cljs release app && lein uberjar
+FROM bellsoft/liberica-openjdk-alpine-musl:21
 
-# Install Python and spawningtool in builder (has package manager)
+WORKDIR /app
+
+# Copy pre-built jar and frontend assets
+COPY docker_temp/dns-big-d-site-standalone.jar ./standalone.jar
+COPY public/ ./public/
+
+# Copy venv from local build
+RUN apk add --no-cache python3 py3-pip
 RUN python3 -m venv /app/venv
 RUN /app/venv/bin/pip install spawningtool
-
-FROM bellsoft/hardened-liberica-runtime-container:jdk-21-crac-cds-musl
-
-WORKDIR /app
-
-# Copy venv from builder stage
-COPY --from=builder /app/venv /app/venv
-COPY --from=builder /app/target/dns-big-d-site-0.1.0-SNAPSHOT-standalone.jar ./standalone.jar
-COPY --from=builder /app/public/ ./public/
 
 EXPOSE 3000
 
